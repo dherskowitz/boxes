@@ -9,7 +9,8 @@ export default defineNuxtConfig({
     '@nuxt/icon',
     '@nuxt/eslint',
     '@peterbud/nuxt-query',
-    '@vite-pwa/nuxt'
+    '@vite-pwa/nuxt',
+    'nuxt-charts'
   ],
 
   css: ['~/assets/css/main.css'],
