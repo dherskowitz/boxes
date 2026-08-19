@@ -5,7 +5,9 @@ export default defineVitestConfig({
     environment: 'nuxt',
     include: ['tests/unit/**/*.spec.ts'],
     globals: true,
-    // mounting the full Nuxt app (PWA + PocketBase plugins) is slow in happy-dom
-    testTimeout: 30_000
+    // mounting the full Nuxt app (PWA + PocketBase plugins) is slow in happy-dom,
+    // both for individual tests and for the setupNuxt() hook that boots it
+    testTimeout: 30_000,
+    hookTimeout: 30_000
   }
 })
