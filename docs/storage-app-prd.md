@@ -19,6 +19,7 @@ A mobile-first Progressive Web App for tracking items kept in physical storage b
 - Offline **writes** — creating/editing while offline. v1 only guarantees offline **reads** of previously-viewed data.
 - Multi-tenant support (separate isolated groups within one deployment). All app members share one pool of boxes.
 - Native mobile app — this is PWA-only.
+- **Reporting screen** — deferred to v1.1. Specified in §7.10; not part of the v1 acceptance criteria.
 
 ## 4. Users & Access Model
 
@@ -41,6 +42,7 @@ No separate signup/invite flow is in scope — membership provisioning happens o
 - **QR scanning**: `vue-qrcode-reader` npm package (camera access)
 - **Server state**: `@peterbud/nuxt-query` (TanStack Query) — all PocketBase reads and writes go through it so the offline read cache stays authoritative.
 - **Image handling**: `browser-image-compression` — photos are compressed client-side before upload.
+- **Charts** (v1.1): `nuxt-charts` — Nuxt module for `vue-chrts`, built on Unovis. Used only by the reporting screen (§7.10).
 - **Hosting**: static frontend (Vercel or Netlify); PocketBase hosted separately. The deployed PocketBase must not sit behind Cloudflare Access or any other edge auth on `/api/*` — browsers cannot complete a CORS preflight through it. Protect `/_/` (the admin dashboard) instead.
 
 ### 5.1 Schema provisioning
@@ -64,6 +66,12 @@ See `pocketbase-schema.md` for full field definitions and API rules. Summary:
 - `storage_tags` — name (unique), color, created_by — shared curated tag list applied to both boxes and items
 - `storage_box_permissions` — box, user, role (editor) — sparse override table for edit access beyond the creator
 - `storage_item_voice_notes` (v2, not built in v1) — item (relation), audio file, label, created_by — multiple recordings per item
+
+Reporting adds three **view** collections (v1.1, §7.10). PocketBase view collections are read-only SQL projections — they have no write surface, and their `listRule`/`viewRule` use the same enabled-membership gate as the tables above:
+
+- `storage_report_box_fill` — one row per box: title, location, status, item_count, photo_count
+- `storage_report_tag_usage` — one row per tag: name, color, box_count, item_count
+- `storage_report_growth` — one row per month: month, boxes_created, items_created
 
 These collections and their API rules are provisioned by `pb_migrations/` (§5.1), so a fresh PocketBase instance is fully set up by starting it. The API rules are the real access control — see §4 — and the frontend must satisfy them: ownership fields (`created_by`, and `user` on comments) are required on create and rejected on update.
 
@@ -127,6 +135,27 @@ These collections and their API rules are provisioned by `pb_migrations/` (§5.1
 - Installable on iOS/Android home screens.
 - A lightweight "Add to Home Screen" prompt/nudge on first visit (respecting each platform's install-prompt constraints — iOS Safari has no native install prompt API, so this needs to be an in-app instructional nudge on iOS specifically).
 
+### 7.10 Reporting (v1.1)
+
+A read-only `/reports` screen showing the shape of the collection at a glance. Available to any enabled app member; there is no per-user or per-box scoping, since every member can already see every box.
+
+**Aggregation happens in PocketBase, not the browser.** Each chart reads one of the view collections in §6, so the screen fetches tens of rows rather than every item. Do not fetch full record sets and reduce them client-side.
+
+Contents, top to bottom:
+
+1. **Totals** — boxes, items, tags, photos. Stat tiles, not charts.
+2. **Items per box** — horizontal bar, top 10 by `item_count`. Answers "which boxes are crowded".
+3. **Boxes by location** — donut, grouped from `storage_report_box_fill` rows in the browser (tens of rows, not thousands of records — this is the one permitted client-side grouping).
+4. **Tag usage** — horizontal bar, top 10 by combined `box_count + item_count`.
+5. **Growth** — area chart, boxes and items created per month.
+
+Requirements:
+
+- Every chart has an explicit empty state. A fresh instance has zero of everything, and an empty chart reads as broken rather than empty.
+- The screen is **online-only**. Offline it shows a needs-connection state rather than stale or partial figures — unlike the rest of v1, partial aggregates would be actively misleading.
+- Archived boxes are included but visually distinguished in the status split; they are excluded from the "items per box" ranking.
+- No export, no date-range picker, no drill-through in v1.1. Charts are not links.
+
 ## 8. Non-Functional Requirements
 
 - **Mobile-first**: primary design target is a phone screen; layouts should scale up gracefully to tablet/desktop but should never be designed desktop-first.
@@ -147,6 +176,7 @@ These collections and their API rules are provisioned by `pb_migrations/` (§5.1
 | `/item/:id` | Item detail: description/notes/images/comments |
 | `/search` | Cross-box/item search, with tag filter chips |
 | `/tags` | Browse/manage the shared tag list (rename, delete, see usage count) |
+| `/reports` | Read-only charts over the whole collection (v1.1, §7.10) |
 
 ## 10. Acceptance Criteria (high-level)
 
@@ -169,7 +199,7 @@ These collections and their API rules are provisioned by `pb_migrations/` (§5.1
 - Whether `qr_id` should also be human-typeable as a manual fallback entry point if a QR won't scan — not required for v1 but worth keeping the `qr_id` short and simple in case this is added later.
 - Reminders and push notifications are deferred to a future version — do not build scaffolding for them now.
 - Voice notes are deferred to v2; the `storage_item_voice_notes` collection schema is planned but should not be created or scaffolded in v1.
-- Whether tag create/rename/delete should be restricted to an admin role (via `app_memberships.role`) rather than open to every member — left open for v1, revisit if tag-list quality becomes an issue.
+- ~~Whether tag create/rename/delete should be restricted to an admin role~~ — **decided**: deleting a tag requires an `app_memberships.role` of `owner` or `admin` (§7.7). Create and rename remain open to every member.
 
 ## 12. Reference
 
