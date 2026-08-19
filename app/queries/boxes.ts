@@ -1,8 +1,6 @@
 import type { StorageBox } from '~/types/pocketbase'
 import type { BoxListFilters } from '~/queries/keys'
-import { keys } from '~/queries/keys'
-
-export const PER_PAGE = 30
+import { keys, PER_PAGE } from '~/queries/keys'
 
 export interface BoxFilter {
   /** A `$pb.filter()` template — placeholders only, never a raw value. */

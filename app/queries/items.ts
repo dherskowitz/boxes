@@ -1,7 +1,6 @@
 import type { StorageItem } from '~/types/pocketbase'
 import type { ItemListFilters } from '~/queries/keys'
-import { keys } from '~/queries/keys'
-import { PER_PAGE } from '~/queries/boxes'
+import { keys, PER_PAGE } from '~/queries/keys'
 
 export function useItemList(filters: Ref<ItemListFilters>) {
   const { $pb } = useNuxtApp()

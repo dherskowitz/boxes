@@ -1,5 +1,9 @@
 import type { BoxStatus } from '~/types/pocketbase'
 
+/** Page size for every paginated list. Lives here, not in a query module, so
+ *  no slice has to import across another slice's file to paginate. */
+export const PER_PAGE = 30
+
 export interface BoxListFilters {
   /** Omit to show only active boxes. */
   status?: BoxStatus
