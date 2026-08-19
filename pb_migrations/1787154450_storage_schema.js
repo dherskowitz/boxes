@@ -21,6 +21,7 @@ const SHARED = [
     "fields": [
       {
         "autogeneratePattern": "[a-z0-9]{15}",
+        "help": "",
         "hidden": false,
         "id": "text3208210256",
         "max": 15,
@@ -35,6 +36,7 @@ const SHARED = [
       },
       {
         "autogeneratePattern": "",
+        "help": "",
         "hidden": false,
         "id": "text2324736937",
         "max": 0,
@@ -49,6 +51,7 @@ const SHARED = [
       },
       {
         "autogeneratePattern": "",
+        "help": "",
         "hidden": false,
         "id": "text1579384326",
         "max": 0,
@@ -63,6 +66,7 @@ const SHARED = [
       },
       {
         "autogeneratePattern": "",
+        "help": "",
         "hidden": false,
         "id": "text3252000302",
         "max": 0,
@@ -76,6 +80,7 @@ const SHARED = [
         "type": "text"
       },
       {
+        "help": "",
         "hidden": false,
         "id": "bool1260321794",
         "name": "active",
@@ -86,6 +91,7 @@ const SHARED = [
       },
       {
         "convertURLs": false,
+        "help": "",
         "hidden": false,
         "id": "editor1843675174",
         "maxSize": 0,
@@ -119,8 +125,6 @@ const SHARED = [
     "indexes": [
       "CREATE UNIQUE INDEX `idx_PKqLpArPgL` ON `apps` (`key`)"
     ],
-    "created": "2025-12-30 04:09:09.537Z",
-    "updated": "2025-12-30 04:10:21.585Z",
     "system": false
   },
   {
@@ -135,6 +139,7 @@ const SHARED = [
     "fields": [
       {
         "autogeneratePattern": "[a-z0-9]{15}",
+        "help": "",
         "hidden": false,
         "id": "text3208210256",
         "max": 15,
@@ -150,6 +155,7 @@ const SHARED = [
       {
         "cascadeDelete": false,
         "collectionId": "_pb_users_auth_",
+        "help": "",
         "hidden": false,
         "id": "relation2375276105",
         "maxSelect": 1,
@@ -163,6 +169,7 @@ const SHARED = [
       {
         "cascadeDelete": false,
         "collectionId": "pbc_923867626",
+        "help": "",
         "hidden": false,
         "id": "relation3379458255",
         "maxSelect": 999,
@@ -174,6 +181,7 @@ const SHARED = [
         "type": "relation"
       },
       {
+        "help": "",
         "hidden": false,
         "id": "select1466534506",
         "maxSelect": 1,
@@ -190,6 +198,7 @@ const SHARED = [
         ]
       },
       {
+        "help": "",
         "hidden": false,
         "id": "bool1358543748",
         "name": "enabled",
@@ -220,8 +229,6 @@ const SHARED = [
       }
     ],
     "indexes": [],
-    "created": "2025-12-30 04:12:39.640Z",
-    "updated": "2025-12-31 20:05:49.169Z",
     "system": false
   }
 ]
@@ -239,6 +246,7 @@ const STORAGE = [
     "fields": [
       {
         "autogeneratePattern": "[a-z0-9]{15}",
+        "help": "",
         "hidden": false,
         "id": "text3208210256",
         "max": 15,
@@ -253,6 +261,7 @@ const STORAGE = [
       },
       {
         "autogeneratePattern": "",
+        "help": "",
         "hidden": false,
         "id": "text1579384326",
         "max": 0,
@@ -267,6 +276,7 @@ const STORAGE = [
       },
       {
         "autogeneratePattern": "",
+        "help": "",
         "hidden": false,
         "id": "text1716930793",
         "max": 0,
@@ -282,6 +292,7 @@ const STORAGE = [
       {
         "cascadeDelete": false,
         "collectionId": "_pb_users_auth_",
+        "help": "",
         "hidden": false,
         "id": "relation3725765462",
         "maxSelect": 1,
@@ -316,8 +327,6 @@ const STORAGE = [
     "indexes": [
       "CREATE UNIQUE INDEX `idx_182tx1ekaf` ON `storage_tags` (`name`)"
     ],
-    "created": "2026-08-18 21:32:59.875Z",
-    "updated": "2026-08-19 15:55:41.589Z",
     "system": false
   },
   {
@@ -332,6 +341,7 @@ const STORAGE = [
     "fields": [
       {
         "autogeneratePattern": "[a-z0-9]{15}",
+        "help": "",
         "hidden": false,
         "id": "text3208210256",
         "max": 15,
@@ -346,6 +356,7 @@ const STORAGE = [
       },
       {
         "autogeneratePattern": "",
+        "help": "",
         "hidden": false,
         "id": "text724990059",
         "max": 0,
@@ -360,6 +371,7 @@ const STORAGE = [
       },
       {
         "convertURLs": false,
+        "help": "",
         "hidden": false,
         "id": "editor1843675174",
         "maxSize": 0,
@@ -371,6 +383,7 @@ const STORAGE = [
       },
       {
         "autogeneratePattern": "",
+        "help": "",
         "hidden": false,
         "id": "text1587448267",
         "max": 0,
@@ -384,6 +397,7 @@ const STORAGE = [
         "type": "text"
       },
       {
+        "help": "",
         "hidden": false,
         "id": "file3760176746",
         "maxSelect": 15,
@@ -406,6 +420,7 @@ const STORAGE = [
       },
       {
         "autogeneratePattern": "",
+        "help": "",
         "hidden": false,
         "id": "text1520847447",
         "max": 0,
@@ -419,6 +434,7 @@ const STORAGE = [
         "type": "text"
       },
       {
+        "help": "",
         "hidden": false,
         "id": "select2063623452",
         "maxSelect": 1,
@@ -435,6 +451,7 @@ const STORAGE = [
       {
         "cascadeDelete": false,
         "collectionId": "pbc_822680373",
+        "help": "",
         "hidden": false,
         "id": "relation1874629670",
         "maxSelect": 999,
@@ -448,6 +465,7 @@ const STORAGE = [
       {
         "cascadeDelete": false,
         "collectionId": "_pb_users_auth_",
+        "help": "",
         "hidden": false,
         "id": "relation3725765462",
         "maxSelect": 1,
@@ -482,8 +500,6 @@ const STORAGE = [
     "indexes": [
       "CREATE UNIQUE INDEX `idx_LvcdU8J6CX` ON `storage_boxes` (`qr_id`)"
     ],
-    "created": "2026-08-18 21:23:00.051Z",
-    "updated": "2026-08-19 15:55:31.466Z",
     "system": false
   },
   {
@@ -498,6 +514,7 @@ const STORAGE = [
     "fields": [
       {
         "autogeneratePattern": "[a-z0-9]{15}",
+        "help": "",
         "hidden": false,
         "id": "text3208210256",
         "max": 15,
@@ -513,6 +530,7 @@ const STORAGE = [
       {
         "cascadeDelete": false,
         "collectionId": "pbc_1225868984",
+        "help": "",
         "hidden": false,
         "id": "relation145311802",
         "maxSelect": 1,
@@ -525,6 +543,7 @@ const STORAGE = [
       },
       {
         "autogeneratePattern": "",
+        "help": "",
         "hidden": false,
         "id": "text724990059",
         "max": 0,
@@ -539,6 +558,7 @@ const STORAGE = [
       },
       {
         "convertURLs": false,
+        "help": "",
         "hidden": false,
         "id": "editor1843675174",
         "maxSize": 0,
@@ -550,6 +570,7 @@ const STORAGE = [
       },
       {
         "convertURLs": false,
+        "help": "",
         "hidden": false,
         "id": "editor18589324",
         "maxSize": 0,
@@ -560,6 +581,7 @@ const STORAGE = [
         "type": "editor"
       },
       {
+        "help": "",
         "hidden": false,
         "id": "file3760176746",
         "maxSelect": 99,
@@ -583,6 +605,7 @@ const STORAGE = [
       {
         "cascadeDelete": false,
         "collectionId": "pbc_822680373",
+        "help": "",
         "hidden": false,
         "id": "relation1874629670",
         "maxSelect": 999,
@@ -596,6 +619,7 @@ const STORAGE = [
       {
         "cascadeDelete": false,
         "collectionId": "_pb_users_auth_",
+        "help": "",
         "hidden": false,
         "id": "relation3725765462",
         "maxSelect": 1,
@@ -628,8 +652,6 @@ const STORAGE = [
       }
     ],
     "indexes": [],
-    "created": "2026-08-18 21:37:20.987Z",
-    "updated": "2026-08-19 14:03:05.613Z",
     "system": false
   },
   {
@@ -644,6 +666,7 @@ const STORAGE = [
     "fields": [
       {
         "autogeneratePattern": "[a-z0-9]{15}",
+        "help": "",
         "hidden": false,
         "id": "text3208210256",
         "max": 15,
@@ -659,6 +682,7 @@ const STORAGE = [
       {
         "cascadeDelete": false,
         "collectionId": "pbc_1711152412",
+        "help": "",
         "hidden": false,
         "id": "relation521872670",
         "maxSelect": 1,
@@ -672,6 +696,7 @@ const STORAGE = [
       {
         "cascadeDelete": false,
         "collectionId": "_pb_users_auth_",
+        "help": "",
         "hidden": false,
         "id": "relation2375276105",
         "maxSelect": 1,
@@ -684,6 +709,7 @@ const STORAGE = [
       },
       {
         "autogeneratePattern": "",
+        "help": "",
         "hidden": false,
         "id": "text999008199",
         "max": 0,
@@ -718,8 +744,6 @@ const STORAGE = [
       }
     ],
     "indexes": [],
-    "created": "2026-08-18 21:38:30.159Z",
-    "updated": "2026-08-19 14:02:41.980Z",
     "system": false
   },
   {
@@ -734,6 +758,7 @@ const STORAGE = [
     "fields": [
       {
         "autogeneratePattern": "[a-z0-9]{15}",
+        "help": "",
         "hidden": false,
         "id": "text3208210256",
         "max": 15,
@@ -749,6 +774,7 @@ const STORAGE = [
       {
         "cascadeDelete": false,
         "collectionId": "pbc_1711152412",
+        "help": "",
         "hidden": false,
         "id": "relation521872670",
         "maxSelect": 1,
@@ -760,6 +786,7 @@ const STORAGE = [
         "type": "relation"
       },
       {
+        "help": "",
         "hidden": false,
         "id": "file410859157",
         "maxSelect": 1,
@@ -778,6 +805,7 @@ const STORAGE = [
       },
       {
         "autogeneratePattern": "",
+        "help": "",
         "hidden": false,
         "id": "text245846248",
         "max": 0,
@@ -793,6 +821,7 @@ const STORAGE = [
       {
         "cascadeDelete": false,
         "collectionId": "_pb_users_auth_",
+        "help": "",
         "hidden": false,
         "id": "relation3725765462",
         "maxSelect": 1,
@@ -825,8 +854,6 @@ const STORAGE = [
       }
     ],
     "indexes": [],
-    "created": "2026-08-18 21:52:04.791Z",
-    "updated": "2026-08-19 14:03:19.771Z",
     "system": false
   },
   {
@@ -841,6 +868,7 @@ const STORAGE = [
     "fields": [
       {
         "autogeneratePattern": "[a-z0-9]{15}",
+        "help": "",
         "hidden": false,
         "id": "text3208210256",
         "max": 15,
@@ -856,6 +884,7 @@ const STORAGE = [
       {
         "cascadeDelete": false,
         "collectionId": "pbc_1225868984",
+        "help": "",
         "hidden": false,
         "id": "relation145311802",
         "maxSelect": 1,
@@ -869,6 +898,7 @@ const STORAGE = [
       {
         "cascadeDelete": false,
         "collectionId": "_pb_users_auth_",
+        "help": "",
         "hidden": false,
         "id": "relation2375276105",
         "maxSelect": 1,
@@ -880,6 +910,7 @@ const STORAGE = [
         "type": "relation"
       },
       {
+        "help": "",
         "hidden": false,
         "id": "select1466534506",
         "maxSelect": 1,
@@ -914,8 +945,6 @@ const STORAGE = [
       }
     ],
     "indexes": [],
-    "created": "2026-08-18 21:53:55.221Z",
-    "updated": "2026-08-18 21:53:55.221Z",
     "system": false
   }
 ]

@@ -67,6 +67,12 @@ def main():
     if missing:
         sys.exit(f"instance is missing shared collections: {', '.join(missing)}")
 
+    # created/updated are per-instance metadata; keeping them makes every
+    # re-snapshot diff on timestamps and hides real schema changes.
+    for c in by_name.values():
+        c.pop("created", None)
+        c.pop("updated", None)
+
     storage = [by_name[n] for n in ORDER if n in by_name]
     storage += [by_name[n] for n in sorted(by_name)
                 if n.startswith("storage_") and n not in ORDER]
