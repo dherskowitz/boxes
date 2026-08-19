@@ -25,13 +25,28 @@ VIEWS = {
     # `app` is a multi-relation, stored as a JSON array, hence json_each.
     "storage_app_users": """
         SELECT
-          u.id   AS id,
-          u.name AS name,
-          m.role AS role
-        FROM users u
-        JOIN app_memberships m ON m.user = u.id
-        JOIN apps a ON a.id IN (SELECT value FROM json_each(m.app))
-        WHERE m.enabled = TRUE AND a.key = 'storage'
+          id,
+          CAST(name AS TEXT) AS name,
+          CAST((CASE role_rank
+            WHEN 1 THEN 'owner'
+            WHEN 2 THEN 'admin'
+            WHEN 3 THEN 'member'
+            ELSE 'readonly' END) AS TEXT) AS role
+        FROM (
+          SELECT
+            u.id   AS id,
+            u.name AS name,
+            MIN(CASE m.role
+                  WHEN 'owner'  THEN 1
+                  WHEN 'admin'  THEN 2
+                  WHEN 'member' THEN 3
+                  ELSE 4 END) AS role_rank
+          FROM users u
+          JOIN app_memberships m ON m.user = u.id
+          JOIN apps a ON a.id IN (SELECT value FROM json_each(m.app))
+          WHERE m.enabled = TRUE AND a.key = 'storage'
+          GROUP BY u.id, u.name
+        )
     """,
     "storage_report_box_fill": """
         SELECT
@@ -39,9 +54,9 @@ VIEWS = {
           b.title    AS title,
           b.location AS location,
           b.status   AS status,
-          (SELECT COUNT(*) FROM storage_items i WHERE i.box = b.id) AS item_count,
-          (SELECT COUNT(*) FROM storage_items i WHERE i.box = b.id
-             AND i.images != '' AND i.images != '[]') AS photo_count
+          CAST((SELECT COUNT(*) FROM storage_items i WHERE i.box = b.id) AS INTEGER) AS item_count,
+          CAST((SELECT COUNT(*) FROM storage_items i WHERE i.box = b.id
+             AND i.images != '' AND i.images != '[]') AS INTEGER) AS photo_count
         FROM storage_boxes b
     """,
     "storage_report_tag_usage": """
@@ -49,24 +64,24 @@ VIEWS = {
           t.id    AS id,
           t.name  AS name,
           t.color AS color,
-          (SELECT COUNT(*) FROM storage_boxes b
-             WHERE EXISTS (SELECT 1 FROM json_each(b.tags) WHERE value = t.id)) AS box_count,
-          (SELECT COUNT(*) FROM storage_items i
-             WHERE EXISTS (SELECT 1 FROM json_each(i.tags) WHERE value = t.id)) AS item_count
+          CAST((SELECT COUNT(*) FROM storage_boxes b
+             WHERE EXISTS (SELECT 1 FROM json_each(b.tags) WHERE value = t.id)) AS INTEGER) AS box_count,
+          CAST((SELECT COUNT(*) FROM storage_items i
+             WHERE EXISTS (SELECT 1 FROM json_each(i.tags) WHERE value = t.id)) AS INTEGER) AS item_count
         FROM storage_tags t
     """,
     "storage_report_growth": """
         SELECT
-          m.month AS id,
+          REPLACE(m.month, '-', '') AS id,
           m.month AS month,
-          (SELECT COUNT(*) FROM storage_boxes b
-             WHERE strftime('%Y-%m', b.created) = m.month) AS boxes_created,
-          (SELECT COUNT(*) FROM storage_items i
-             WHERE strftime('%Y-%m', i.created) = m.month) AS items_created
+          CAST((SELECT COUNT(*) FROM storage_boxes b
+             WHERE strftime('%Y-%m', b.created) = m.month) AS INTEGER) AS boxes_created,
+          CAST((SELECT COUNT(*) FROM storage_items i
+             WHERE strftime('%Y-%m', i.created) = m.month) AS INTEGER) AS items_created
         FROM (
-          SELECT DISTINCT strftime('%Y-%m', created) AS month FROM storage_boxes
+          SELECT DISTINCT CAST(strftime('%Y-%m', created) AS TEXT) AS month FROM storage_boxes
           UNION
-          SELECT DISTINCT strftime('%Y-%m', created) AS month FROM storage_items
+          SELECT DISTINCT CAST(strftime('%Y-%m', created) AS TEXT) AS month FROM storage_items
         ) m
         ORDER BY m.month
     """,
@@ -118,7 +133,6 @@ def main():
                 "listRule": GATE,
                 "viewRule": GATE,
                 "viewQuery": query,
-                "options": {"query": query},
             },
         )
         print(f"created view {name}")

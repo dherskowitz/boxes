@@ -976,8 +976,8 @@ const STORAGE = [
         "autogeneratePattern": "",
         "help": "",
         "hidden": false,
-        "id": "_clone_WiDR",
-        "max": 255,
+        "id": "text1579384326",
+        "max": 0,
         "min": 0,
         "name": "name",
         "pattern": "",
@@ -988,26 +988,24 @@ const STORAGE = [
         "type": "text"
       },
       {
+        "autogeneratePattern": "",
         "help": "",
         "hidden": false,
-        "id": "_clone_mY4v",
-        "maxSelect": 1,
+        "id": "text1466534506",
+        "max": 0,
+        "min": 0,
         "name": "role",
+        "pattern": "",
         "presentable": false,
-        "required": true,
+        "primaryKey": false,
+        "required": false,
         "system": false,
-        "type": "select",
-        "values": [
-          "owner",
-          "admin",
-          "member",
-          "readonly"
-        ]
+        "type": "text"
       }
     ],
     "indexes": [],
     "system": false,
-    "viewQuery": "SELECT u.id AS id, u.name AS name, m.role AS role FROM users u JOIN app_memberships m ON m.user = u.id JOIN apps a ON a.id IN (SELECT value FROM json_each(m.app)) WHERE m.enabled = TRUE AND a.key = 'storage'"
+    "viewQuery": "SELECT id, CAST(name AS TEXT) AS name, CAST((CASE role_rank WHEN 1 THEN 'owner' WHEN 2 THEN 'admin' WHEN 3 THEN 'member' ELSE 'readonly' END) AS TEXT) AS role FROM ( SELECT u.id AS id, u.name AS name, MIN(CASE m.role WHEN 'owner' THEN 1 WHEN 'admin' THEN 2 WHEN 'member' THEN 3 ELSE 4 END) AS role_rank FROM users u JOIN app_memberships m ON m.user = u.id JOIN apps a ON a.id IN (SELECT value FROM json_each(m.app)) WHERE m.enabled = TRUE AND a.key = 'storage' GROUP BY u.id, u.name )"
   },
   {
     "id": "pbc_2659375862",
@@ -1038,7 +1036,7 @@ const STORAGE = [
         "autogeneratePattern": "",
         "help": "",
         "hidden": false,
-        "id": "_clone_EfyY",
+        "id": "_clone_2h53",
         "max": 0,
         "min": 0,
         "name": "title",
@@ -1053,7 +1051,7 @@ const STORAGE = [
         "autogeneratePattern": "",
         "help": "",
         "hidden": false,
-        "id": "_clone_WO1u",
+        "id": "_clone_mqna",
         "max": 0,
         "min": 0,
         "name": "location",
@@ -1067,7 +1065,7 @@ const STORAGE = [
       {
         "help": "",
         "hidden": false,
-        "id": "_clone_qv9J",
+        "id": "_clone_o0in",
         "maxSelect": 1,
         "name": "status",
         "presentable": false,
@@ -1082,29 +1080,33 @@ const STORAGE = [
       {
         "help": "",
         "hidden": false,
-        "id": "json2944294834",
-        "maxSize": 1,
+        "id": "number2944294834",
+        "max": null,
+        "min": null,
         "name": "item_count",
+        "onlyInt": true,
         "presentable": false,
         "required": false,
         "system": false,
-        "type": "json"
+        "type": "number"
       },
       {
         "help": "",
         "hidden": false,
-        "id": "json1065894869",
-        "maxSize": 1,
+        "id": "number1065894869",
+        "max": null,
+        "min": null,
         "name": "photo_count",
+        "onlyInt": true,
         "presentable": false,
         "required": false,
         "system": false,
-        "type": "json"
+        "type": "number"
       }
     ],
     "indexes": [],
     "system": false,
-    "viewQuery": "SELECT b.id AS id, b.title AS title, b.location AS location, b.status AS status, (SELECT COUNT(*) FROM storage_items i WHERE i.box = b.id) AS item_count, (SELECT COUNT(*) FROM storage_items i WHERE i.box = b.id AND i.images != '' AND i.images != '[]') AS photo_count FROM storage_boxes b"
+    "viewQuery": "SELECT b.id AS id, b.title AS title, b.location AS location, b.status AS status, CAST((SELECT COUNT(*) FROM storage_items i WHERE i.box = b.id) AS INTEGER) AS item_count, CAST((SELECT COUNT(*) FROM storage_items i WHERE i.box = b.id AND i.images != '' AND i.images != '[]') AS INTEGER) AS photo_count FROM storage_boxes b"
   },
   {
     "id": "pbc_1966404343",
@@ -1145,29 +1147,33 @@ const STORAGE = [
       {
         "help": "",
         "hidden": false,
-        "id": "json575394000",
-        "maxSize": 1,
+        "id": "number575394000",
+        "max": null,
+        "min": null,
         "name": "boxes_created",
+        "onlyInt": true,
         "presentable": false,
         "required": false,
         "system": false,
-        "type": "json"
+        "type": "number"
       },
       {
         "help": "",
         "hidden": false,
-        "id": "json3468554169",
-        "maxSize": 1,
+        "id": "number3468554169",
+        "max": null,
+        "min": null,
         "name": "items_created",
+        "onlyInt": true,
         "presentable": false,
         "required": false,
         "system": false,
-        "type": "json"
+        "type": "number"
       }
     ],
     "indexes": [],
     "system": false,
-    "viewQuery": "SELECT m.month AS id, m.month AS month, (SELECT COUNT(*) FROM storage_boxes b WHERE strftime('%Y-%m', b.created) = m.month) AS boxes_created, (SELECT COUNT(*) FROM storage_items i WHERE strftime('%Y-%m', i.created) = m.month) AS items_created FROM ( SELECT DISTINCT strftime('%Y-%m', created) AS month FROM storage_boxes UNION SELECT DISTINCT strftime('%Y-%m', created) AS month FROM storage_items ) m ORDER BY m.month"
+    "viewQuery": "SELECT REPLACE(m.month, '-', '') AS id, m.month AS month, CAST((SELECT COUNT(*) FROM storage_boxes b WHERE strftime('%Y-%m', b.created) = m.month) AS INTEGER) AS boxes_created, CAST((SELECT COUNT(*) FROM storage_items i WHERE strftime('%Y-%m', i.created) = m.month) AS INTEGER) AS items_created FROM ( SELECT DISTINCT CAST(strftime('%Y-%m', created) AS TEXT) AS month FROM storage_boxes UNION SELECT DISTINCT CAST(strftime('%Y-%m', created) AS TEXT) AS month FROM storage_items ) m ORDER BY m.month"
   },
   {
     "id": "pbc_328497782",
@@ -1198,7 +1204,7 @@ const STORAGE = [
         "autogeneratePattern": "",
         "help": "",
         "hidden": false,
-        "id": "_clone_C6Ad",
+        "id": "_clone_ggL8",
         "max": 0,
         "min": 0,
         "name": "name",
@@ -1213,7 +1219,7 @@ const STORAGE = [
         "autogeneratePattern": "",
         "help": "",
         "hidden": false,
-        "id": "_clone_L0KN",
+        "id": "_clone_lja0",
         "max": 0,
         "min": 0,
         "name": "color",
@@ -1227,29 +1233,33 @@ const STORAGE = [
       {
         "help": "",
         "hidden": false,
-        "id": "json4243822730",
-        "maxSize": 1,
+        "id": "number4243822730",
+        "max": null,
+        "min": null,
         "name": "box_count",
+        "onlyInt": true,
         "presentable": false,
         "required": false,
         "system": false,
-        "type": "json"
+        "type": "number"
       },
       {
         "help": "",
         "hidden": false,
-        "id": "json2944294834",
-        "maxSize": 1,
+        "id": "number2944294834",
+        "max": null,
+        "min": null,
         "name": "item_count",
+        "onlyInt": true,
         "presentable": false,
         "required": false,
         "system": false,
-        "type": "json"
+        "type": "number"
       }
     ],
     "indexes": [],
     "system": false,
-    "viewQuery": "SELECT t.id AS id, t.name AS name, t.color AS color, (SELECT COUNT(*) FROM storage_boxes b WHERE EXISTS (SELECT 1 FROM json_each(b.tags) WHERE value = t.id)) AS box_count, (SELECT COUNT(*) FROM storage_items i WHERE EXISTS (SELECT 1 FROM json_each(i.tags) WHERE value = t.id)) AS item_count FROM storage_tags t"
+    "viewQuery": "SELECT t.id AS id, t.name AS name, t.color AS color, CAST((SELECT COUNT(*) FROM storage_boxes b WHERE EXISTS (SELECT 1 FROM json_each(b.tags) WHERE value = t.id)) AS INTEGER) AS box_count, CAST((SELECT COUNT(*) FROM storage_items i WHERE EXISTS (SELECT 1 FROM json_each(i.tags) WHERE value = t.id)) AS INTEGER) AS item_count FROM storage_tags t"
   }
 ]
 
