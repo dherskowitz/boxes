@@ -1,5 +1,14 @@
 <script setup lang="ts">
-const { isMember, isMembershipPending, logout } = useAuth()
+const {
+  isMember,
+  isMembershipPending,
+  isMembershipError,
+  membershipError,
+  refetchMembership,
+  logout
+} = useAuth()
+
+const membershipErrorMessage = computed(() => pbError(membershipError.value))
 
 const links = [
   { label: 'Boxes', to: '/' },
@@ -27,6 +36,18 @@ async function onSignOut() {
     <main class="flex-1 p-4">
       <div v-if="isMembershipPending" data-testid="membership-pending">
         <USkeleton class="h-8 w-48" />
+      </div>
+
+      <div
+        v-else-if="isMembershipError"
+        data-testid="membership-error"
+        class="flex flex-col items-start gap-3"
+      >
+        <UAlert
+          title="Could not check your access"
+          :description="membershipErrorMessage"
+        />
+        <UButton data-testid="membership-retry" @click="refetchMembership()">Try again</UButton>
       </div>
 
       <UAlert

@@ -50,3 +50,17 @@ test.describe('signed in without app membership', () => {
     await expect(page.getByTestId('access-denied')).toBeVisible()
   })
 })
+
+test.describe('signed in with a failing directory request', () => {
+  test.use({ storageState: 'tests/e2e/.auth/dana.json' })
+
+  test('reports the failure instead of claiming the account has no access', async ({ page }) => {
+    await page.route('**/api/collections/storage_app_users/records**', route =>
+      route.abort('failed')
+    )
+    await page.goto('/')
+    // the directory query retries with backoff before settling into an error
+    await expect(page.getByTestId('membership-error')).toBeVisible({ timeout: 30_000 })
+    await expect(page.getByTestId('access-denied')).toBeHidden()
+  })
+})
