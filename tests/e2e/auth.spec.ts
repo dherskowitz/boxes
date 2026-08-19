@@ -20,6 +20,18 @@ test.describe('unauthenticated', () => {
     await expect(page).toHaveURL('/box/seedbox1')
   })
 
+  for (const hostile of ['https://evil.example', '//evil.example']) {
+    test(`ignores the external redirect target ${hostile}`, async ({ page }) => {
+      await page.goto(`/login?redirect=${encodeURIComponent(hostile)}`)
+      await page.getByLabel('Email').fill('dana@local.test')
+      await page.getByLabel('Password').fill('storagedev123')
+      await page.getByRole('button', { name: 'Sign in' }).click()
+      // signed in and inside the app, not stranded on the login screen
+      await expect(page).toHaveURL('/')
+      await expect(page.getByTestId('sign-out')).toBeVisible()
+    })
+  }
+
   test('shows an error for a bad password', async ({ page }) => {
     await page.goto('/login')
     await page.getByLabel('Email').fill('dana@local.test')

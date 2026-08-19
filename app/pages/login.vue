@@ -15,7 +15,12 @@ async function onSubmit() {
   try {
     await login(email.value, password.value)
     const redirect = route.query.redirect
-    await navigateTo(typeof redirect === 'string' ? redirect : '/')
+    // Only an internal path. `navigateTo` refuses an external target by
+    // throwing, which would leave the user signed in but stranded on /login —
+    // and `//evil.example` starts with '/' while still being external.
+    const isInternal
+      = typeof redirect === 'string' && redirect.startsWith('/') && !redirect.startsWith('//')
+    await navigateTo(isInternal ? redirect : '/')
   } catch (e) {
     error.value = pbError(e)
   } finally {
