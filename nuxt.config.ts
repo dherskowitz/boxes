@@ -27,9 +27,10 @@ export default defineNuxtConfig({
   },
 
   // `composables/` and `utils/` are scanned by default; `queries/` is not.
-  // Every query module is consumed like a composable, so scan it too.
+  // Every query module is consumed like a composable, so scan it too —
+  // recursively, so `queries/reports/growth.ts` is picked up as well.
   imports: {
-    dirs: ['queries']
+    dirs: ['queries/**']
   },
 
   pwa: {
