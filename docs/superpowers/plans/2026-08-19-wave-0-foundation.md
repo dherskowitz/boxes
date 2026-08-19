@@ -197,7 +197,29 @@ Expected: four `created view ...` lines and no traceback.
 
 Then open `http://localhost:8090/_/` and confirm all four appear under Collections with a view (eye) icon and no error banner on the query.
 
-- [ ] **Step 4: Capture the schema**
+- [ ] **Step 4: Delete the auto-generated migrations**
+
+PocketBase writes an auto-migration file into `pb_migrations/` for every schema
+change made through the admin API or UI — and `docker-compose.yml` mounts that
+directory read-write, so they land in your working tree. They must go: the
+baseline generated in the next step already contains the views, so leaving these
+in place would apply them twice on a fresh instance.
+
+```bash
+git status --porcelain pb_migrations/
+rm -f pb_migrations/*_created_*.js pb_migrations/*_deleted_*.js pb_migrations/*_updated_*.js
+ls pb_migrations/
+```
+Expected: `ls` shows exactly one file, `1787154450_storage_schema.js`. If any
+other file remains, inspect it before deleting — an auto-migration for something
+you did not intend to change means the instance has drifted.
+
+- [ ] **Step 5: Capture the schema**
+
+`pb-snapshot.py` picks up any `storage_*` collection automatically, appending
+ones outside its explicit `ORDER` list alphabetically — which places all four
+views after the six base collections they select from. No edit to the script is
+needed.
 
 ```bash
 python3 scripts/pb-snapshot.py http://localhost:8090
@@ -205,7 +227,7 @@ git diff --stat pb_migrations/
 ```
 Expected: `pb_migrations/1787154450_storage_schema.js` modified, adding exactly the four view collections and nothing else. If any `storage_*` base collection or either shared collection appears in the diff, **stop** — the snapshot captured drift and needs investigating before it is committed.
 
-- [ ] **Step 5: Prove a fresh instance comes up fully provisioned**
+- [ ] **Step 6: Prove a fresh instance comes up fully provisioned**
 
 ```bash
 docker compose down -v && docker compose up -d
@@ -214,7 +236,14 @@ curl -s http://localhost:8090/api/collections -H "Authorization: $(curl -s -X PO
 ```
 Expected: all six base collections plus the four views, from the migration alone. This is the check that the migration — not the live database — is the source of truth.
 
-- [ ] **Step 6: Commit**
+Then confirm the fresh boot did not itself write new auto-migrations:
+
+```bash
+ls pb_migrations/
+```
+Expected: still exactly one file.
+
+- [ ] **Step 7: Commit**
 
 ```bash
 git add scripts/pb-views.py pb_migrations/
@@ -620,11 +649,13 @@ The membership gate. `app_memberships` is superuser-only from a browser, so the 
 **Files:**
 - Create: `app/queries/appUsers.ts`
 - Create: `app/composables/useAuth.ts`
+- Modify: `app/plugins/pocketbase.ts`
 - Test: `tests/unit/useAuth.spec.ts`
 
 **Interfaces:**
 - Consumes: `keys` from `~/queries/keys`, `AppUser` from `~/types/pocketbase`.
 - Produces:
+  - `$pbUser` — a `Ref<AuthRecord | null>` provided by the PocketBase plugin, updated on every auth change. Components read this rather than `pb.authStore.record`, which is not reactive.
   - `useAppUsers(): { data: Ref<AppUser[] | undefined>, isPending, error }` — the full directory.
   - `useAppUserMap(): ComputedRef<Map<string, AppUser>>` — id → member, for resolving comment authors and creator labels.
   - `useAuth(): { user, userId, isLoggedIn, member, role, isMember, isMembershipPending, login, logout }`.
@@ -666,7 +697,33 @@ describe('deriveMembership', () => {
 Run: `pnpm test tests/unit/useAuth.spec.ts`
 Expected: FAIL — cannot resolve `~/composables/useAuth`.
 
-- [ ] **Step 3: Write the directory query**
+- [ ] **Step 3: Make the auth record reactive in the plugin**
+
+`$pb.authStore.onChange()` returns an unsubscribe function and has no automatic
+cleanup. Registering it inside `useAuth()` would add a permanent listener for
+every component that calls the composable. The plugin runs exactly once for the
+app's lifetime, so the subscription belongs here.
+
+Replace `app/plugins/pocketbase.ts` with:
+
+```ts
+import PocketBase from 'pocketbase'
+
+export default defineNuxtPlugin(() => {
+  const pb = new PocketBase(useRuntimeConfig().public.pocketbaseUrl)
+
+  // One subscription for the app's lifetime. `useAuth()` reads this ref rather
+  // than registering its own listener per call site.
+  const pbUser = ref(pb.authStore.record)
+  pb.authStore.onChange(() => {
+    pbUser.value = pb.authStore.record
+  })
+
+  return { provide: { pb, pbUser } }
+})
+```
+
+- [ ] **Step 4: Write the directory query**
 
 `app/queries/appUsers.ts`:
 
@@ -683,11 +740,14 @@ import { keys } from '~/queries/keys'
  * is cheaper than per-record expansion would be.
  */
 export function useAppUsers() {
-  const { $pb } = useNuxtApp()
+  const { $pb, $pbUser } = useNuxtApp()
   return useQuery({
     queryKey: keys.appUsers.list(),
     queryFn: () =>
       $pb.collection('storage_app_users').getFullList<AppUser>({ sort: 'name' }),
+    // Without a session this returns an empty set rather than an error, so
+    // firing it on the login page would just be a pointless request.
+    enabled: computed(() => $pbUser.value !== null),
     staleTime: 5 * 60 * 1000
   })
 }
@@ -702,7 +762,7 @@ export function useAppUserMap() {
 `getFullList` is the one permitted unpaginated read in this codebase: the
 directory is bounded by the size of the team, and every consumer needs all of it.
 
-- [ ] **Step 4: Write the auth composable**
+- [ ] **Step 5: Write the auth composable**
 
 `app/composables/useAuth.ts`:
 
@@ -724,14 +784,9 @@ export function deriveMembership(
 }
 
 export function useAuth() {
-  const { $pb } = useNuxtApp()
+  const { $pb, $pbUser } = useNuxtApp()
 
-  const authRecord = ref($pb.authStore.record)
-  $pb.authStore.onChange(() => {
-    authRecord.value = $pb.authStore.record
-  })
-
-  const userId = computed(() => authRecord.value?.id ?? '')
+  const userId = computed(() => $pbUser.value?.id ?? '')
   const isLoggedIn = computed(() => userId.value !== '')
 
   const { data: directory, isPending: isMembershipPending } = useAppUsers()
@@ -748,7 +803,7 @@ export function useAuth() {
   }
 
   return {
-    user: authRecord,
+    user: $pbUser,
     userId,
     isLoggedIn,
     member,
@@ -761,15 +816,15 @@ export function useAuth() {
 }
 ```
 
-- [ ] **Step 5: Run the test to verify it passes**
+- [ ] **Step 6: Run the test to verify it passes**
 
 Run: `pnpm test tests/unit/useAuth.spec.ts`
 Expected: PASS, 4 tests.
 
-- [ ] **Step 6: Commit**
+- [ ] **Step 7: Commit**
 
 ```bash
-git add app/queries/appUsers.ts app/composables/useAuth.ts tests/unit/useAuth.spec.ts
+git add app/plugins/pocketbase.ts app/queries/appUsers.ts app/composables/useAuth.ts tests/unit/useAuth.spec.ts
 git commit -m "Add member directory query and auth composable"
 ```
 
@@ -1518,7 +1573,7 @@ access-denied state, and the redirect that makes QR deep links work.
 **Files:**
 - Create: `tests/e2e/auth.setup.ts`, `tests/e2e/auth.spec.ts`
 - Modify: `playwright.config.ts`
-- Modify: `tests/e2e/smoke.spec.ts`
+- Delete: `tests/e2e/smoke.spec.ts` (superseded — see step 4)
 
 **Interfaces:**
 - Consumes: the seeded accounts from Task 9, the login page and shell from Task 8.
@@ -1574,7 +1629,22 @@ main project depend on it:
 Keep whatever `use` and `webServer` blocks already exist. If `devices` is not
 yet imported, add it: `import { defineConfig, devices } from '@playwright/test'`.
 
-- [ ] **Step 4: Ignore the stored credentials**
+- [ ] **Step 4: Delete the stale e2e smoke test**
+
+`tests/e2e/smoke.spec.ts` asserts `getByText('Storage Boxes')` on `/`. With the
+route guard in place `/` redirects to `/login`, which also renders that string —
+so the test would pass for entirely the wrong reason while proving nothing. Its
+coverage is subsumed by `auth.spec.ts`, which asserts the shell renders for a
+signed-in member.
+
+```bash
+git rm tests/e2e/smoke.spec.ts
+```
+
+`tests/unit/smoke.spec.ts` is untouched — it mounts `index.vue` directly, needs
+no session, and still guards the Nuxt test harness.
+
+- [ ] **Step 5: Ignore the stored credentials**
 
 Append to `.gitignore`:
 
@@ -1582,7 +1652,7 @@ Append to `.gitignore`:
 tests/e2e/.auth/
 ```
 
-- [ ] **Step 5: Write the failing flow test**
+- [ ] **Step 6: Write the failing flow test**
 
 `tests/e2e/auth.spec.ts`:
 
@@ -1635,7 +1705,7 @@ test.describe('signed in without app membership', () => {
 })
 ```
 
-- [ ] **Step 6: Run it to verify it fails for the right reason**
+- [ ] **Step 7: Run it to verify it fails for the right reason**
 
 ```bash
 python3 scripts/pb-seed.py http://localhost:8090
@@ -1646,12 +1716,12 @@ should pass — in which case confirm it fails when you temporarily comment out
 the `navigateTo` in `auth.global.ts`, then restore it. A test that has never
 been seen red proves nothing.
 
-- [ ] **Step 7: Make the whole suite green**
+- [ ] **Step 8: Make the whole suite green**
 
 Run: `pnpm lint && pnpm test && pnpm test:e2e`
 Expected: PASS across all three. Fix whatever is red; do not skip or `.only` anything.
 
-- [ ] **Step 8: Commit**
+- [ ] **Step 9: Commit**
 
 ```bash
 git add tests/e2e playwright.config.ts .gitignore
