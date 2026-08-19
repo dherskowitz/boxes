@@ -946,6 +946,310 @@ const STORAGE = [
     ],
     "indexes": [],
     "system": false
+  },
+  {
+    "id": "pbc_3601393757",
+    "listRule": "@request.auth.id != \"\" &&\n@request.auth.app_memberships_via_user.app.key ?= \"storage\" &&\n@request.auth.app_memberships_via_user.enabled ?= true",
+    "viewRule": "@request.auth.id != \"\" &&\n@request.auth.app_memberships_via_user.app.key ?= \"storage\" &&\n@request.auth.app_memberships_via_user.enabled ?= true",
+    "createRule": null,
+    "updateRule": null,
+    "deleteRule": null,
+    "name": "storage_app_users",
+    "type": "view",
+    "fields": [
+      {
+        "autogeneratePattern": "",
+        "help": "",
+        "hidden": false,
+        "id": "text3208210256",
+        "max": 0,
+        "min": 0,
+        "name": "id",
+        "pattern": "^[a-z0-9]+$",
+        "presentable": false,
+        "primaryKey": true,
+        "required": true,
+        "system": true,
+        "type": "text"
+      },
+      {
+        "autogeneratePattern": "",
+        "help": "",
+        "hidden": false,
+        "id": "_clone_WiDR",
+        "max": 255,
+        "min": 0,
+        "name": "name",
+        "pattern": "",
+        "presentable": false,
+        "primaryKey": false,
+        "required": false,
+        "system": false,
+        "type": "text"
+      },
+      {
+        "help": "",
+        "hidden": false,
+        "id": "_clone_mY4v",
+        "maxSelect": 1,
+        "name": "role",
+        "presentable": false,
+        "required": true,
+        "system": false,
+        "type": "select",
+        "values": [
+          "owner",
+          "admin",
+          "member",
+          "readonly"
+        ]
+      }
+    ],
+    "indexes": [],
+    "system": false,
+    "viewQuery": "SELECT u.id AS id, u.name AS name, m.role AS role FROM users u JOIN app_memberships m ON m.user = u.id JOIN apps a ON a.id IN (SELECT value FROM json_each(m.app)) WHERE m.enabled = TRUE AND a.key = 'storage'"
+  },
+  {
+    "id": "pbc_2659375862",
+    "listRule": "@request.auth.id != \"\" &&\n@request.auth.app_memberships_via_user.app.key ?= \"storage\" &&\n@request.auth.app_memberships_via_user.enabled ?= true",
+    "viewRule": "@request.auth.id != \"\" &&\n@request.auth.app_memberships_via_user.app.key ?= \"storage\" &&\n@request.auth.app_memberships_via_user.enabled ?= true",
+    "createRule": null,
+    "updateRule": null,
+    "deleteRule": null,
+    "name": "storage_report_box_fill",
+    "type": "view",
+    "fields": [
+      {
+        "autogeneratePattern": "",
+        "help": "",
+        "hidden": false,
+        "id": "text3208210256",
+        "max": 0,
+        "min": 0,
+        "name": "id",
+        "pattern": "^[a-z0-9]+$",
+        "presentable": false,
+        "primaryKey": true,
+        "required": true,
+        "system": true,
+        "type": "text"
+      },
+      {
+        "autogeneratePattern": "",
+        "help": "",
+        "hidden": false,
+        "id": "_clone_EfyY",
+        "max": 0,
+        "min": 0,
+        "name": "title",
+        "pattern": "",
+        "presentable": false,
+        "primaryKey": false,
+        "required": false,
+        "system": false,
+        "type": "text"
+      },
+      {
+        "autogeneratePattern": "",
+        "help": "",
+        "hidden": false,
+        "id": "_clone_WO1u",
+        "max": 0,
+        "min": 0,
+        "name": "location",
+        "pattern": "",
+        "presentable": false,
+        "primaryKey": false,
+        "required": false,
+        "system": false,
+        "type": "text"
+      },
+      {
+        "help": "",
+        "hidden": false,
+        "id": "_clone_qv9J",
+        "maxSelect": 1,
+        "name": "status",
+        "presentable": false,
+        "required": false,
+        "system": false,
+        "type": "select",
+        "values": [
+          "active",
+          "archived"
+        ]
+      },
+      {
+        "help": "",
+        "hidden": false,
+        "id": "json2944294834",
+        "maxSize": 1,
+        "name": "item_count",
+        "presentable": false,
+        "required": false,
+        "system": false,
+        "type": "json"
+      },
+      {
+        "help": "",
+        "hidden": false,
+        "id": "json1065894869",
+        "maxSize": 1,
+        "name": "photo_count",
+        "presentable": false,
+        "required": false,
+        "system": false,
+        "type": "json"
+      }
+    ],
+    "indexes": [],
+    "system": false,
+    "viewQuery": "SELECT b.id AS id, b.title AS title, b.location AS location, b.status AS status, (SELECT COUNT(*) FROM storage_items i WHERE i.box = b.id) AS item_count, (SELECT COUNT(*) FROM storage_items i WHERE i.box = b.id AND i.images != '' AND i.images != '[]') AS photo_count FROM storage_boxes b"
+  },
+  {
+    "id": "pbc_1966404343",
+    "listRule": "@request.auth.id != \"\" &&\n@request.auth.app_memberships_via_user.app.key ?= \"storage\" &&\n@request.auth.app_memberships_via_user.enabled ?= true",
+    "viewRule": "@request.auth.id != \"\" &&\n@request.auth.app_memberships_via_user.app.key ?= \"storage\" &&\n@request.auth.app_memberships_via_user.enabled ?= true",
+    "createRule": null,
+    "updateRule": null,
+    "deleteRule": null,
+    "name": "storage_report_growth",
+    "type": "view",
+    "fields": [
+      {
+        "autogeneratePattern": "",
+        "help": "",
+        "hidden": false,
+        "id": "text3208210256",
+        "max": 0,
+        "min": 0,
+        "name": "id",
+        "pattern": "^[a-z0-9]+$",
+        "presentable": false,
+        "primaryKey": true,
+        "required": true,
+        "system": true,
+        "type": "text"
+      },
+      {
+        "help": "",
+        "hidden": false,
+        "id": "json2394296326",
+        "maxSize": 1,
+        "name": "month",
+        "presentable": false,
+        "required": false,
+        "system": false,
+        "type": "json"
+      },
+      {
+        "help": "",
+        "hidden": false,
+        "id": "json575394000",
+        "maxSize": 1,
+        "name": "boxes_created",
+        "presentable": false,
+        "required": false,
+        "system": false,
+        "type": "json"
+      },
+      {
+        "help": "",
+        "hidden": false,
+        "id": "json3468554169",
+        "maxSize": 1,
+        "name": "items_created",
+        "presentable": false,
+        "required": false,
+        "system": false,
+        "type": "json"
+      }
+    ],
+    "indexes": [],
+    "system": false,
+    "viewQuery": "SELECT m.month AS id, m.month AS month, (SELECT COUNT(*) FROM storage_boxes b WHERE strftime('%Y-%m', b.created) = m.month) AS boxes_created, (SELECT COUNT(*) FROM storage_items i WHERE strftime('%Y-%m', i.created) = m.month) AS items_created FROM ( SELECT DISTINCT strftime('%Y-%m', created) AS month FROM storage_boxes UNION SELECT DISTINCT strftime('%Y-%m', created) AS month FROM storage_items ) m ORDER BY m.month"
+  },
+  {
+    "id": "pbc_328497782",
+    "listRule": "@request.auth.id != \"\" &&\n@request.auth.app_memberships_via_user.app.key ?= \"storage\" &&\n@request.auth.app_memberships_via_user.enabled ?= true",
+    "viewRule": "@request.auth.id != \"\" &&\n@request.auth.app_memberships_via_user.app.key ?= \"storage\" &&\n@request.auth.app_memberships_via_user.enabled ?= true",
+    "createRule": null,
+    "updateRule": null,
+    "deleteRule": null,
+    "name": "storage_report_tag_usage",
+    "type": "view",
+    "fields": [
+      {
+        "autogeneratePattern": "",
+        "help": "",
+        "hidden": false,
+        "id": "text3208210256",
+        "max": 0,
+        "min": 0,
+        "name": "id",
+        "pattern": "^[a-z0-9]+$",
+        "presentable": false,
+        "primaryKey": true,
+        "required": true,
+        "system": true,
+        "type": "text"
+      },
+      {
+        "autogeneratePattern": "",
+        "help": "",
+        "hidden": false,
+        "id": "_clone_C6Ad",
+        "max": 0,
+        "min": 0,
+        "name": "name",
+        "pattern": "",
+        "presentable": false,
+        "primaryKey": false,
+        "required": false,
+        "system": false,
+        "type": "text"
+      },
+      {
+        "autogeneratePattern": "",
+        "help": "",
+        "hidden": false,
+        "id": "_clone_L0KN",
+        "max": 0,
+        "min": 0,
+        "name": "color",
+        "pattern": "",
+        "presentable": false,
+        "primaryKey": false,
+        "required": false,
+        "system": false,
+        "type": "text"
+      },
+      {
+        "help": "",
+        "hidden": false,
+        "id": "json4243822730",
+        "maxSize": 1,
+        "name": "box_count",
+        "presentable": false,
+        "required": false,
+        "system": false,
+        "type": "json"
+      },
+      {
+        "help": "",
+        "hidden": false,
+        "id": "json2944294834",
+        "maxSize": 1,
+        "name": "item_count",
+        "presentable": false,
+        "required": false,
+        "system": false,
+        "type": "json"
+      }
+    ],
+    "indexes": [],
+    "system": false,
+    "viewQuery": "SELECT t.id AS id, t.name AS name, t.color AS color, (SELECT COUNT(*) FROM storage_boxes b WHERE EXISTS (SELECT 1 FROM json_each(b.tags) WHERE value = t.id)) AS box_count, (SELECT COUNT(*) FROM storage_items i WHERE EXISTS (SELECT 1 FROM json_each(i.tags) WHERE value = t.id)) AS item_count FROM storage_tags t"
   }
 ]
 
@@ -980,6 +1284,10 @@ migrate((app) => {
 }, (app) => {
   // Reverse dependency order. Shared collections are intentionally left alone.
   const names = [
+  "storage_report_tag_usage",
+  "storage_report_growth",
+  "storage_report_box_fill",
+  "storage_app_users",
   "storage_box_permissions",
   "storage_item_voice_notes",
   "storage_comments",
