@@ -1,12 +1,6 @@
 import type { StorageBox } from '~/types/pocketbase'
-import type { BoxListFilters } from '~/queries/keys'
-import { keys, PER_PAGE } from '~/queries/keys'
-
-export interface BoxFilter {
-  /** A `$pb.filter()` template — placeholders only, never a raw value. */
-  raw: string
-  params: Record<string, unknown>
-}
+import type { BoxListFilters, PbFilter } from '~/queries/keys'
+import { keys, PER_PAGE, tagClauses } from '~/queries/keys'
 
 /**
  * Build a PocketBase filter template from list filters, for use with
@@ -17,14 +11,10 @@ export interface BoxFilter {
  * (see the qr_id deep-link path in boxes.ts history). `$pb.filter` binds
  * `params` by placeholder and escapes them itself.
  */
-export function boxFilter(filters: BoxListFilters): BoxFilter {
-  const params: Record<string, unknown> = { status: filters.status ?? 'active' }
-  const clauses = ['status = {:status}']
-  ;(filters.tagIds ?? []).forEach((tagId, i) => {
-    const key = `tag${i}`
-    params[key] = tagId
-    clauses.push(`tags ~ {:${key}}`)
-  })
+export function boxFilter(filters: BoxListFilters): PbFilter {
+  const tags = tagClauses(filters.tagIds)
+  const params: Record<string, unknown> = { status: filters.status ?? 'active', ...tags.params }
+  const clauses = ['status = {:status}', ...tags.clauses]
   if (filters.search) {
     params.search = filters.search
     clauses.push('(title ~ {:search} || description ~ {:search} || location ~ {:search})')

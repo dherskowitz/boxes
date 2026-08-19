@@ -4,6 +4,24 @@ import type { BoxStatus } from '~/types/pocketbase'
  *  no slice has to import across another slice's file to paginate. */
 export const PER_PAGE = 30
 
+export interface PbFilter {
+  /** A `$pb.filter()` template — placeholders only, never a raw value. */
+  raw: string
+  params: Record<string, unknown>
+}
+
+/**
+ * Clauses and bound params for a tag filter: a record matches only if it
+ * carries every selected tag. Shared by box and item filters so the two
+ * cannot drift apart.
+ */
+export function tagClauses(tagIds: string[] = []) {
+  return {
+    clauses: tagIds.map((_, i) => `tags ~ {:tag${i}}`),
+    params: Object.fromEntries(tagIds.map((id, i) => [`tag${i}`, id]))
+  }
+}
+
 export interface BoxListFilters {
   /** Omit to show only active boxes. */
   status?: BoxStatus
