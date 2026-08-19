@@ -2,7 +2,8 @@ import { defineConfig, devices } from '@playwright/test'
 
 // Bind explicitly to 127.0.0.1: `localhost` resolves to ::1 on some hosts while
 // Chromium dials 127.0.0.1, which makes the suite fail intermittently.
-const BASE = 'http://127.0.0.1:3000'
+const PORT = process.env.E2E_PORT ?? '3000'
+const BASE = `http://127.0.0.1:${PORT}`
 
 export default defineConfig({
   testDir: 'tests/e2e',
@@ -17,7 +18,7 @@ export default defineConfig({
     ...devices['Pixel 7']
   },
   webServer: {
-    command: 'pnpm dev --host 127.0.0.1 --port 3000',
+    command: `pnpm dev --host 127.0.0.1 --port ${PORT}`,
     url: BASE,
     timeout: 120_000,
     reuseExistingServer: !process.env.CI

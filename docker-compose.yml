@@ -3,8 +3,12 @@
 services:
   pocketbase:
     image: ghcr.io/muchobien/pocketbase:0.39.11
+    # Concurrent worktrees each need their own PB_PORT *and* their own
+    # `docker compose -p <name>` project name — the project name is what
+    # isolates the pb_data volume. Same port with a different project name
+    # still shares one database.
     ports:
-      - "127.0.0.1:8090:8090"
+      - "127.0.0.1:${PB_PORT:-8090}:8090"
     environment:
       PB_ADMIN_EMAIL: ${PB_ADMIN_EMAIL:-dev@local.test}
       PB_ADMIN_PASSWORD: ${PB_ADMIN_PASSWORD:-devpassword123}

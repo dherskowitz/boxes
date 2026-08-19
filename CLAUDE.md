@@ -37,6 +37,22 @@ Admin dashboard: <http://localhost:8090/_/> — `dev@local.test` / `devpassword1
 Local-only credentials, bound to loopback. `docker compose down -v` resets the
 instance to a clean migrated state.
 
+### Running an isolated stack (parallel worktrees)
+
+Each worktree needs its own PocketBase and dev server, or concurrent
+`pnpm test:e2e` runs collide. Pick a slot number per worktree, then:
+
+```bash
+PB_PORT=809<n> docker compose -p storage-<slot> up -d   # e.g. slot 1 -> PB_PORT=8091
+# set NUXT_PUBLIC_POCKETBASE_URL=http://localhost:809<n> in that worktree's .env
+python3 scripts/pb-seed.py http://localhost:809<n>
+E2E_PORT=300<n> pnpm test:e2e
+docker compose -p storage-<slot> down -v   # when done
+```
+
+The `-p` project name is what isolates the `pb_data` volume — a distinct
+`PB_PORT` alone still shares one database across worktrees.
+
 ### Schema changes
 
 `pb_migrations/` recreates every `storage_*` collection, creates
