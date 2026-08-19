@@ -18,6 +18,8 @@ test.describe('unauthenticated', () => {
     await page.getByLabel('Password').fill('storagedev123')
     await page.getByRole('button', { name: 'Sign in' }).click()
     await expect(page).toHaveURL('/box/seedbox1')
+    // Prove a working box screen is reached, not just a surviving URL.
+    await expect(page.getByText('Winter coats and boots')).toBeVisible()
   })
 
   for (const hostile of ['https://evil.example', '//evil.example']) {
