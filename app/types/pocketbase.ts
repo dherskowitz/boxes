@@ -57,7 +57,8 @@ export interface StorageComment extends RecordBase {
 export interface StorageBoxPermission extends RecordBase {
   box: string
   user: string
-  role: 'editor'
+  /** The select allows only `'editor'`, but is not required — `''` when unset. */
+  role: 'editor' | ''
 }
 
 /**
