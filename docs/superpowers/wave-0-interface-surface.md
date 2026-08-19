@@ -3,7 +3,18 @@
 Exact inventory of what wave 1 feature slices may import. Read from the actual
 files on `plan/v1-implementation` at the commit verified by Task 11 (wave 0
 exit check). Nothing here is inferred from the plan — every signature below
-was read from source.
+was read from source, and corrected again by the wave-0 fix wave (see
+`.superpowers/sdd/2026-08-19-wave-0-foundation/fix-wave-report.md`).
+
+**The loop** every slice must leave green:
+
+```bash
+pnpm lint && pnpm typecheck && pnpm test && pnpm test:e2e
+```
+
+`pnpm typecheck` is `vue-tsc --build --noEmit` — it is what actually enforces
+CLAUDE.md's no-`any` / no-`as` / no-`!` rules; eslint does not. Note it covers
+`app/**` only, not `tests/`.
 
 Auto-imports are on (Nuxt). None of the composables/utils below need an
 explicit `import` statement inside `app/` — only types (`import type { ... }
@@ -64,7 +75,9 @@ export interface StorageComment extends RecordBase {
 export interface StorageBoxPermission extends RecordBase {
   box: string
   user: string
-  role: 'editor'               // the only value the schema allows
+  /** The select's only value is 'editor', but it is `required: false` —
+   *  an unset grant comes back as `''`. Always compare against `'editor'`. */
+  role: 'editor' | ''
 }
 
 export interface AppUser {
@@ -106,6 +119,20 @@ export interface ReportGrowth {
 ## `app/queries/keys.ts`
 
 ```ts
+export const PER_PAGE = 30        // page size for every paginated list
+
+export interface PbFilter {
+  raw: string                     // a $pb.filter() template — placeholders only
+  params: Record<string, unknown>
+}
+
+export function tagClauses(tagIds?: string[]): {
+  clauses: string[]               // ['tags ~ {:tag0}', 'tags ~ {:tag1}', …]
+  params: Record<string, string>  // { tag0: …, tag1: … }
+}
+// A record matches only if it carries ALL selected tags. Shared by boxFilter
+// and itemFilter so the two cannot drift.
+
 export interface BoxListFilters {
   status?: BoxStatus            // omit → active only
   tagIds?: string[]             // box matches if it carries ALL of them
@@ -179,6 +206,9 @@ export function pbError(e: unknown): string
 Turns anything thrown by a PocketBase call into a user-facing message.
 Field-validation errors are joined as `"field: message; field2: message2"`.
 A 403 with no field errors becomes `"You do not have permission to do that."`
+plus the server's own message when there is one (`"You do not have permission
+to do that. Only superusers can perform this action."`) — on this app a 403 is
+almost always an ownership-field mistake and PocketBase names the rule.
 Any other `ClientResponseError` falls back to `e.response?.message ||
 e.message`. Non-PocketBase `Error` → `e.message`. Anything else →
 `"Something went wrong."` Always call this in a mutation's `onError` /
@@ -197,18 +227,38 @@ instance or component tree. Returns `null` if `userId` is `''`, `directory`
 is `undefined`, or no directory row matches.
 
 ```ts
-export function useAuth(): {
-  user: Ref<import('pocketbase').AuthRecord>       // $pbUser from the pocketbase plugin; null when signed out
+export function useAuthUser(): {
+  user: Ref<import('pocketbase').AuthRecord>        // $pbUser from the pocketbase plugin; null when signed out
   userId: ComputedRef<string>                       // '' when signed out
   isLoggedIn: ComputedRef<boolean>
-  member: ComputedRef<AppUser | null>                // this app's membership row for the signed-in user
-  role: ComputedRef<MemberRole | null>
-  isMember: ComputedRef<boolean>
-  isMembershipPending: ComputedRef<boolean>           // true while useAppUsers() is loading
   login: (email: string, password: string) => Promise<void>
   logout: () => void
 }
+
+export function useAuth(): ReturnType<typeof useAuthUser> & {
+  member: ComputedRef<AppUser | null>                // this app's membership row for the signed-in user
+  role: ComputedRef<MemberRole | null>
+  isMember: ComputedRef<boolean>
+  isMembershipPending: Ref<boolean>                   // true while useAppUsers() is loading
+  isMembershipError: Ref<boolean>                     // the directory request failed
+  membershipError: Ref<Error | null>                  // run it through pbError()
+  refetchMembership: () => Promise<unknown>           // retry action for the error state
+}
 ```
+
+**Setup context:** `useAuth()` calls `useAppUsers()`, i.e. `useQuery` — it must
+run inside a component `setup()` (or a composable called from one). Calling it
+from a submit handler, a `watch` callback, or any other non-setup context
+throws inside vue-query internals. `useAuthUser()` opens no query and is safe
+anywhere; use it to read `userId` for the `created_by` / `user` ownership field
+in a create handler.
+
+`isMembershipError` exists because a *failed* directory request is not the same
+as *not being a member* — `app/layouts/default.vue` renders
+`data-testid="membership-error"` (with a retry) before it renders
+`data-testid="access-denied"`. Never infer "no access" from an absent
+directory; that is what made every screen unreachable offline.
+
 `login` calls `$pb.collection('users').authWithPassword(...)` and throws on
 failure — callers must catch and run the error through `pbError()`. `logout`
 clears `$pb.authStore` synchronously (no promise, no navigation — callers
@@ -217,6 +267,54 @@ navigate themselves, see `app/layouts/default.vue`'s `onSignOut`).
 `isMember` / `role` are UX-only gates (see CLAUDE.md — "Client-side
 permission checks are UX only"). They exist to drive the access-denied
 screen in `default.vue`, not as an authorization mechanism.
+
+## `app/composables/useCanEdit.ts`
+
+The permission matrix, re-derived from the API rules in
+`pb_migrations/1787154450_storage_schema.js` (read them, do not guess):
+
+| operation | who |
+|---|---|
+| box update | creator **or** an `editor` grant on that box |
+| box delete | creator **only** — an editor grant does not extend to delete |
+| item create / update / delete | box creator **or** an `editor` grant on the box; the item's own `created_by` is never consulted |
+| comment update / delete | its author only |
+| `storage_box_permissions` create / update / delete | box creator only |
+| `storage_tags` create / update | any enabled member — no ownership requirement |
+| `storage_tags` delete | app `owner` or `admin` |
+| everything else (list/view) | any enabled member of the `storage` app |
+
+```ts
+export function canEditBox(
+  box: StorageBox | undefined,
+  userId: string,
+  permissions: StorageBoxPermission[] | undefined
+): boolean
+
+export function canDeleteBox(box: StorageBox | undefined, userId: string): boolean
+
+export const canEditItem = canEditBox        // item rights are its box's rights
+
+export function canEditComment(comment: StorageComment | undefined, userId: string): boolean
+
+export function useCanEdit(box: Ref<StorageBox | undefined>): {
+  canEdit: ComputedRef<boolean>
+  canDelete: ComputedRef<boolean>
+}
+```
+
+The four predicates are pure — plain values in, boolean out, unit tested
+without `$pb` or a component tree. They **fail closed**: no user id, no record,
+or permissions still loading all yield `false`, so an edit control never
+flashes for someone who cannot use it. (The creator check does not need the
+permissions list, so a creator is trusted immediately.)
+
+`useCanEdit` wires them to `useAuthUser()` and `useBoxPermissions()`, so it
+must run inside `setup()`. Note `useBoxPermissions` wraps `getList` — the
+payload is a paginated result, so the predicates take `data.value?.items`.
+
+These are UX gates only. The API rules are the real guard; a `true` here is
+never authorisation.
 
 ## Query modules (`app/queries/*.ts`)
 
@@ -243,34 +341,38 @@ export function useAppUserMap(): ComputedRef<Map<string, AppUser>>
 ### `app/queries/boxes.ts`
 
 ```ts
-export const PER_PAGE = 30
-
-export interface BoxFilter {
-  raw: string                      // a $pb.filter() template — placeholders only
-  params: Record<string, unknown>
-}
-
-export function boxFilter(filters: BoxListFilters): BoxFilter
+export function boxFilter(filters: BoxListFilters): PbFilter
 // Exported for testing. Never hand-build a filter string from user input —
 // always go through boxFilter() + $pb.filter(raw, params) so values are bound
 // by placeholder, not interpolated (see qr_id deep-link injection history
 // noted in the source comment).
 
 export function useBoxList(filters: Ref<BoxListFilters>)
-// getList<StorageBox>(page, PER_PAGE, { filter: boxFilter(...), expand: 'tags', sort: '-created' })
+// const { raw, params } = boxFilter(filters.value)
+// getList<StorageBox>(page, PER_PAGE, {
+//   filter: $pb.filter(raw, params), expand: 'tags', sort: '-created' })
 // queryKey recomputes from filters.value — pass a Ref, not a plain object
 
 export function useBoxByQrId(qrId: Ref<string>)
-// getFirstListItem<StorageBox>('qr_id = {:qrId}', { expand: 'tags' })
+// getFirstListItem<StorageBox>($pb.filter('qr_id = {:qrId}', { qrId: qrId.value }),
+//   { expand: 'tags' })
 // enabled: qrId.value !== ''; retry: false (a 404 should surface immediately, not retry)
 ```
+
+`PER_PAGE` and `PbFilter` live in `keys.ts`, not here — do not import them
+across a slice boundary from `boxes.ts`.
 
 ### `app/queries/items.ts`
 
 ```ts
+export function itemFilter(filters: ItemListFilters): PbFilter
+// { raw: 'box = {:boxId} && tags ~ {:tag0} && …', params: { boxId, tag0, … } }
+// Exported for testing, same convention as boxFilter.
+
 export function useItemList(filters: Ref<ItemListFilters>)
-// getList<StorageItem>(page, PER_PAGE (imported from boxes.ts), {
-//   filter: 'box = {:boxId}', expand: 'tags', sort: '-created' })
+// const { raw, params } = itemFilter(filters.value)
+// getList<StorageItem>(page, PER_PAGE, {
+//   filter: $pb.filter(raw, params), expand: 'tags', sort: '-created' })
 // enabled: filters.value.boxId !== ''
 
 export function useItem(id: Ref<string>)
@@ -278,11 +380,16 @@ export function useItem(id: Ref<string>)
 // enabled: id.value !== ''; retry: false
 ```
 
+`useItemList` **honours `tagIds`**: an item matches only if it carries every
+selected tag, the same rule `boxFilter` applies (both go through
+`tagClauses`).
+
 ### `app/queries/comments.ts`
 
 ```ts
 export function useComments(itemId: Ref<string>)
-// getList<StorageComment>(1, 200, { filter: 'item = {:itemId}', sort: 'created' })
+// getList<StorageComment>(1, 200, {
+//   filter: $pb.filter('item = {:itemId}', { itemId: itemId.value }), sort: 'created' })
 // enabled: itemId.value !== ''
 // Deliberately no expand: 'user' (users collection not expandable by other
 // members) — resolve author names via useAppUserMap().
@@ -301,7 +408,9 @@ export function useTags()
 
 ```ts
 export function useBoxPermissions(boxId: Ref<string>)
-// getList<StorageBoxPermission>(1, 200, { filter: 'box = {:boxId}' })
+// getList<StorageBoxPermission>(1, 200, {
+//   filter: $pb.filter('box = {:boxId}', { boxId: boxId.value }) })
+// Returns a paginated ListResult — read `.items`, not the payload itself.
 // enabled: boxId.value !== ''
 ```
 
@@ -330,6 +439,10 @@ All four are gated by the same `listRule`/`viewRule` (`GATE` in
 | `id` | text (primary key) |
 | `name` | text |
 | `role` | text (`'owner' \| 'admin' \| 'member' \| 'readonly'`, not enforced by the view's field type — narrowed only in the TS `AppUser.role`) |
+
+The view's `role` is `MIN(role_rank)` over the user's enabled `storage`
+memberships, so a user holding several rows shows their **highest** role
+(`owner` < `admin` < `member` < `readonly`), never a duplicate row.
 
 ### `storage_report_box_fill`
 | column | PocketBase field type |
@@ -404,8 +517,12 @@ asks, Dana replies) — the only item with comments.
 - **Create:** always set the ownership field (`created_by` on boxes/items/
   voice notes, `user` on comments) to `@request.auth.id`'s value on create —
   the create API rule requires `@request.body.<field> = @request.auth.id`
-  and an omitted field resolves to empty, which fails the rule. (Source:
-  CLAUDE.md — not independently re-derived from the API rules here.)
+  and an omitted field resolves to empty, which fails the rule. (Re-derived
+  from the `createRule`s in `pb_migrations/1787154450_storage_schema.js` —
+  correct as stated.) `storage_tags` is the exception: **no** rule on it
+  mentions ownership and its `created_by` is optional. Tags are a shared
+  curated vocabulary, not owned — any enabled member may create or edit one,
+  and only an app `owner`/`admin` may delete one.
 - **Update:** never include the ownership field in an update payload, even
   set to the already-correct value — the update rule uses `:isset = false`,
   which rejects the request if the field is present at all. Send only the
@@ -425,6 +542,6 @@ asks, Dana replies) — the only item with comments.
 - **Reports:** aggregate in PocketBase (the view collections), never
   client-side — see `reports.ts`'s doc comment.
 - **Pagination:** every list call must pass `perPage` (or use the module's
-  existing `PER_PAGE = 30` for boxes/items) — never fetch an unbounded list
+  `PER_PAGE = 30` from `~/queries/keys`) — never fetch an unbounded list
   to filter or join client-side. `useTags()` and `useAppUsers()` are the
   deliberate exceptions (small, bounded vocab/roster) via `getFullList`.
