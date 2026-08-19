@@ -9,7 +9,7 @@ export function useItemList(filters: Ref<ItemListFilters>) {
     queryKey: computed(() => keys.items.list(filters.value)),
     queryFn: () =>
       $pb.collection('storage_items').getList<StorageItem>(filters.value.page ?? 1, PER_PAGE, {
-        filter: `box = "${filters.value.boxId}"`,
+        filter: $pb.filter('box = {:boxId}', { boxId: filters.value.boxId }),
         expand: 'tags',
         sort: '-created'
       }),

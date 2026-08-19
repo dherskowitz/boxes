@@ -14,7 +14,7 @@ export function useComments(itemId: Ref<string>) {
     queryKey: computed(() => keys.comments.byItem(itemId.value)),
     queryFn: () =>
       $pb.collection('storage_comments').getList<StorageComment>(1, 200, {
-        filter: `item = "${itemId.value}"`,
+        filter: $pb.filter('item = {:itemId}', { itemId: itemId.value }),
         sort: 'created'
       }),
     enabled: computed(() => itemId.value !== '')

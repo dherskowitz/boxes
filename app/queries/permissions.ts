@@ -7,7 +7,7 @@ export function useBoxPermissions(boxId: Ref<string>) {
     queryKey: computed(() => keys.permissions.byBox(boxId.value)),
     queryFn: () =>
       $pb.collection('storage_box_permissions').getList<StorageBoxPermission>(1, 200, {
-        filter: `box = "${boxId.value}"`
+        filter: $pb.filter('box = {:boxId}', { boxId: boxId.value })
       }),
     enabled: computed(() => boxId.value !== '')
   })
