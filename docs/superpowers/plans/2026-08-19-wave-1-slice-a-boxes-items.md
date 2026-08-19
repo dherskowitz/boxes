@@ -46,7 +46,7 @@ Client-side checks are **UX only**. Hiding a button is not access control; the A
 
 **Files:**
 - Create: `app/utils/qrId.ts`
-- Test: `tests/unit/qrId.spec.ts`
+- Test: `tests/nuxt/qrId.spec.ts`
 
 **Interfaces:**
 - Consumes: nothing.
@@ -80,7 +80,7 @@ describe('newQrId', () => {
 
 - [ ] **Step 2: Run it and watch it fail**
 
-Run: `pnpm test tests/unit/qrId.spec.ts`
+Run: `pnpm test tests/nuxt/qrId.spec.ts`
 Expected: FAIL — cannot resolve `~/utils/qrId`.
 
 - [ ] **Step 3: Implement**
@@ -118,13 +118,13 @@ export function newQrId(): string {
 
 - [ ] **Step 4: Run the test**
 
-Run: `pnpm test tests/unit/qrId.spec.ts`
+Run: `pnpm test tests/nuxt/qrId.spec.ts`
 Expected: PASS, 3 tests.
 
 - [ ] **Step 5: Commit**
 
 ```bash
-git add app/utils/qrId.ts tests/unit/qrId.spec.ts
+git add app/utils/qrId.ts tests/nuxt/qrId.spec.ts
 git commit -m "Add qr_id generator for box labels"
 ```
 
@@ -134,7 +134,7 @@ git commit -m "Add qr_id generator for box labels"
 
 **Files:**
 - Create: `app/utils/compressImage.ts`
-- Test: `tests/unit/compressImage.spec.ts`
+- Test: `tests/nuxt/compressImage.spec.ts`
 
 **Interfaces:**
 - Consumes: `browser-image-compression` (already a dependency).
@@ -192,7 +192,7 @@ describe('compressImage', () => {
 
 - [ ] **Step 2: Run it and watch it fail**
 
-Run: `pnpm test tests/unit/compressImage.spec.ts`
+Run: `pnpm test tests/nuxt/compressImage.spec.ts`
 Expected: FAIL — cannot resolve `~/utils/compressImage`.
 
 - [ ] **Step 3: Implement**
@@ -227,13 +227,13 @@ export function compressImages(files: File[]): Promise<File[]> {
 
 - [ ] **Step 4: Run the test**
 
-Run: `pnpm test tests/unit/compressImage.spec.ts`
+Run: `pnpm test tests/nuxt/compressImage.spec.ts`
 Expected: PASS, 4 tests.
 
 - [ ] **Step 5: Commit**
 
 ```bash
-git add app/utils/compressImage.ts tests/unit/compressImage.spec.ts
+git add app/utils/compressImage.ts tests/nuxt/compressImage.spec.ts
 git commit -m "Add client-side image compression for uploads"
 ```
 
@@ -280,7 +280,7 @@ this removal stays visible rather than silently closing the gap.
 
 **Files:**
 - Modify: `app/queries/boxes.ts` (append; do not alter the existing read functions or `boxFilter`)
-- Test: `tests/unit/boxMutations.spec.ts`
+- Test: `tests/nuxt/boxMutations.spec.ts`
 
 **Interfaces:**
 - Consumes: `keys`, `StorageBox`, `newQrId`, `compressImages`.
@@ -332,7 +332,7 @@ describe('boxUpdatePayload', () => {
 
 - [ ] **Step 2: Run it and watch it fail**
 
-Run: `pnpm test tests/unit/boxMutations.spec.ts`
+Run: `pnpm test tests/nuxt/boxMutations.spec.ts`
 Expected: FAIL — `boxUpdatePayload` is not exported.
 
 - [ ] **Step 3: Implement, appended to `app/queries/boxes.ts`**
@@ -456,13 +456,13 @@ Images go via `FormData` because PocketBase file uploads cannot be sent as JSON.
 
 - [ ] **Step 4: Run the test**
 
-Run: `pnpm test tests/unit/boxMutations.spec.ts`
+Run: `pnpm test tests/nuxt/boxMutations.spec.ts`
 Expected: PASS, 5 tests. Then `pnpm lint` clean.
 
 - [ ] **Step 5: Commit**
 
 ```bash
-git add app/queries/boxes.ts tests/unit/boxMutations.spec.ts
+git add app/queries/boxes.ts tests/nuxt/boxMutations.spec.ts
 git commit -m "Add box create, update, archive and delete mutations"
 ```
 
@@ -472,7 +472,7 @@ git commit -m "Add box create, update, archive and delete mutations"
 
 **Files:**
 - Modify: `app/queries/items.ts` (append)
-- Test: `tests/unit/itemMutations.spec.ts`
+- Test: `tests/nuxt/itemMutations.spec.ts`
 
 **Interfaces:**
 - Produces: `useCreateItem()`, `useUpdateItem()`, `useDeleteItem()`, `useMoveItems()`, and the pure `itemUpdatePayload()`.
@@ -510,7 +510,7 @@ describe('itemUpdatePayload', () => {
 
 - [ ] **Step 2: Run it and watch it fail**
 
-Run: `pnpm test tests/unit/itemMutations.spec.ts`
+Run: `pnpm test tests/nuxt/itemMutations.spec.ts`
 Expected: FAIL — `itemUpdatePayload` is not exported.
 
 - [ ] **Step 3: Implement, appended to `app/queries/items.ts`**
@@ -541,13 +541,13 @@ mutationFn: async ({ ids, toBoxId }: { ids: string[], toBoxId: string }) => {
 
 - [ ] **Step 4: Run the test**
 
-Run: `pnpm test tests/unit/itemMutations.spec.ts`
+Run: `pnpm test tests/nuxt/itemMutations.spec.ts`
 Expected: PASS, 3 tests. Then `pnpm lint` clean.
 
 - [ ] **Step 5: Commit**
 
 ```bash
-git add app/queries/items.ts tests/unit/itemMutations.spec.ts
+git add app/queries/items.ts tests/nuxt/itemMutations.spec.ts
 git commit -m "Add item create, update, delete and bulk-move mutations"
 ```
 

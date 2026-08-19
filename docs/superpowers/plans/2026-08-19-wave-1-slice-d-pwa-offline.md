@@ -41,7 +41,7 @@ Wave 0's fix wave addressed the error-vs-denied confusion in that layout. Your c
 
 **Files:**
 - Create: `app/composables/useOnline.ts`
-- Test: `tests/unit/useOnline.spec.ts`
+- Test: `tests/nuxt/useOnline.spec.ts`
 
 **Interfaces:**
 - Produces: `useOnline(): { isOnline: Ref<boolean> }`.
@@ -84,7 +84,7 @@ Include a comment naming the `navigator.onLine` limitation and why no probe exis
 - [ ] **Step 5: Commit**
 
 ```bash
-git add app/composables/useOnline.ts tests/unit/useOnline.spec.ts
+git add app/composables/useOnline.ts tests/nuxt/useOnline.spec.ts
 git commit -m "Add online/offline signal composable"
 ```
 
@@ -165,7 +165,7 @@ Cover: the banner renders when offline, does not render when online, and `assert
 - [ ] **Step 5: Commit**
 
 ```bash
-git add app/components/OfflineBanner.vue app/composables/useOnline.ts tests/unit/
+git add app/components/OfflineBanner.vue app/composables/useOnline.ts tests/nuxt/
 git commit -m "Add offline banner and write guard"
 ```
 
@@ -263,7 +263,7 @@ Cover the three branches — installable (event captured), iOS (instructional co
 - [ ] **Step 5: Commit**
 
 ```bash
-git add app/components/InstallPrompt.vue tests/unit/installPrompt.spec.ts
+git add app/components/InstallPrompt.vue tests/nuxt/installPrompt.spec.ts
 git commit -m "Add install prompt with iOS instructional fallback"
 ```
 

@@ -46,7 +46,7 @@ Note **photo_count is 0 across the board.** That makes the photos tile a real em
 
 **Files:**
 - Modify: `app/queries/reports.ts` (replace the stub)
-- Test: `tests/unit/reports.spec.ts`
+- Test: `tests/nuxt/reports.spec.ts`
 
 **Interfaces:**
 - Consumes: `keys.reports.*`, `ReportBoxFill`, `ReportTagUsage`, `ReportGrowth`.
@@ -143,7 +143,7 @@ Note the deliberate asymmetry, straight from the spec: **archived boxes are incl
 
 - [ ] **Step 2: Run and watch it fail**
 
-Run: `pnpm test tests/unit/reports.spec.ts`
+Run: `pnpm test tests/nuxt/reports.spec.ts`
 Expected: FAIL — the module is an empty stub.
 
 - [ ] **Step 3: Implement**
@@ -155,7 +155,7 @@ Keep the doc comment already in `reports.ts` about aggregating in PocketBase —
 - [ ] **Step 5: Commit**
 
 ```bash
-git add app/queries/reports.ts tests/unit/reports.spec.ts
+git add app/queries/reports.ts tests/nuxt/reports.spec.ts
 git commit -m "Add report queries and aggregation helpers"
 ```
 

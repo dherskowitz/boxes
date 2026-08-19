@@ -40,7 +40,7 @@ Deleting a tag strips it from every box and item that had it applied. PRD §7.7 
 
 **Files:**
 - Modify: `app/queries/tags.ts` (append; leave `useTags` untouched)
-- Test: `tests/unit/tagMutations.spec.ts`
+- Test: `tests/nuxt/tagMutations.spec.ts`
 
 **Interfaces:**
 - Consumes: `keys`, `StorageTag`, `useAuth`.
@@ -79,7 +79,7 @@ describe('normalizeTagName', () => {
 
 - [ ] **Step 2: Run it and watch it fail**
 
-Run: `pnpm test tests/unit/tagMutations.spec.ts`
+Run: `pnpm test tests/nuxt/tagMutations.spec.ts`
 Expected: FAIL — `normalizeTagName` is not exported.
 
 - [ ] **Step 3: Implement, appended to `app/queries/tags.ts`**
@@ -155,13 +155,13 @@ The cross-invalidation on rename and delete is the subtle part: a tag is a relat
 
 - [ ] **Step 4: Run the test**
 
-Run: `pnpm test tests/unit/tagMutations.spec.ts`
+Run: `pnpm test tests/nuxt/tagMutations.spec.ts`
 Expected: PASS, 5 tests. `pnpm lint` clean.
 
 - [ ] **Step 5: Commit**
 
 ```bash
-git add app/queries/tags.ts tests/unit/tagMutations.spec.ts
+git add app/queries/tags.ts tests/nuxt/tagMutations.spec.ts
 git commit -m "Add tag create, rename and delete mutations"
 ```
 
@@ -171,7 +171,7 @@ git commit -m "Add tag create, rename and delete mutations"
 
 **Files:**
 - Modify: `app/queries/tags.ts` (append)
-- Test: `tests/unit/tagUsage.spec.ts`
+- Test: `tests/nuxt/tagUsage.spec.ts`
 
 **Interfaces:**
 - Produces: `useTagUsage(): ComputedRef<Map<string, { boxCount: number, itemCount: number }>>` and the pure `indexTagUsage()`.
@@ -226,7 +226,7 @@ Note slice J also reads this view. That is fine — two readers of the same view
 - [ ] **Step 5: Commit**
 
 ```bash
-git add app/queries/tags.ts tests/unit/tagUsage.spec.ts
+git add app/queries/tags.ts tests/nuxt/tagUsage.spec.ts
 git commit -m "Add tag usage counts from the report view"
 ```
 
@@ -256,7 +256,7 @@ Required behaviour (PRD §7.7):
 
 A component test is the right level here — the picker's logic is interactive and does not belong to any page yet. Mount it with `mountSuspended`, stub the tag query, and assert: existing tags are offered, selecting adds to the model, an unmatched name offers creation, and a name matching an existing tag after normalisation selects rather than creates.
 
-`tests/unit/tagPicker.spec.ts`.
+`tests/nuxt/tagPicker.spec.ts`.
 
 - [ ] **Step 2: Run and watch it fail**
 
@@ -267,7 +267,7 @@ A component test is the right level here — the picker's logic is interactive a
 - [ ] **Step 5: Commit**
 
 ```bash
-git add app/components/TagPicker.vue tests/unit/tagPicker.spec.ts
+git add app/components/TagPicker.vue tests/nuxt/tagPicker.spec.ts
 git commit -m "Add TagPicker with autocomplete and inline creation"
 ```
 

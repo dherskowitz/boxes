@@ -433,7 +433,7 @@ Every mutation in every slice surfaces failures through this. Written once so te
 
 **Files:**
 - Create: `app/utils/pbError.ts`
-- Test: `tests/unit/pbError.spec.ts`
+- Test: `tests/nuxt/pbError.spec.ts`
 
 **Interfaces:**
 - Consumes: nothing.
@@ -489,7 +489,7 @@ describe('pbError', () => {
 
 - [ ] **Step 2: Run it to verify it fails**
 
-Run: `pnpm test tests/unit/pbError.spec.ts`
+Run: `pnpm test tests/nuxt/pbError.spec.ts`
 Expected: FAIL — cannot resolve `~/utils/pbError`.
 
 - [ ] **Step 3: Write the implementation**
@@ -534,13 +534,13 @@ export function pbError(e: unknown): string {
 
 - [ ] **Step 4: Run the test to verify it passes**
 
-Run: `pnpm test tests/unit/pbError.spec.ts`
+Run: `pnpm test tests/nuxt/pbError.spec.ts`
 Expected: PASS, 5 tests.
 
 - [ ] **Step 5: Commit**
 
 ```bash
-git add app/utils/pbError.ts tests/unit/pbError.spec.ts
+git add app/utils/pbError.ts tests/nuxt/pbError.spec.ts
 git commit -m "Add PocketBase error message helper"
 ```
 
@@ -650,7 +650,7 @@ The membership gate. `app_memberships` is superuser-only from a browser, so the 
 - Create: `app/queries/appUsers.ts`
 - Create: `app/composables/useAuth.ts`
 - Modify: `app/plugins/pocketbase.ts`
-- Test: `tests/unit/useAuth.spec.ts`
+- Test: `tests/nuxt/useAuth.spec.ts`
 
 **Interfaces:**
 - Consumes: `keys` from `~/queries/keys`, `AppUser` from `~/types/pocketbase`.
@@ -694,7 +694,7 @@ describe('deriveMembership', () => {
 
 - [ ] **Step 2: Run it to verify it fails**
 
-Run: `pnpm test tests/unit/useAuth.spec.ts`
+Run: `pnpm test tests/nuxt/useAuth.spec.ts`
 Expected: FAIL — cannot resolve `~/composables/useAuth`.
 
 - [ ] **Step 3: Make the auth record reactive in the plugin**
@@ -818,13 +818,13 @@ export function useAuth() {
 
 - [ ] **Step 6: Run the test to verify it passes**
 
-Run: `pnpm test tests/unit/useAuth.spec.ts`
+Run: `pnpm test tests/nuxt/useAuth.spec.ts`
 Expected: PASS, 4 tests.
 
 - [ ] **Step 7: Commit**
 
 ```bash
-git add app/plugins/pocketbase.ts app/queries/appUsers.ts app/composables/useAuth.ts tests/unit/useAuth.spec.ts
+git add app/plugins/pocketbase.ts app/queries/appUsers.ts app/composables/useAuth.ts tests/nuxt/useAuth.spec.ts
 git commit -m "Add member directory query and auth composable"
 ```
 
@@ -1012,7 +1012,7 @@ export {}
 
 - [ ] **Step 7: Write the failing test for the filter builder**
 
-`tests/unit/boxFilter.spec.ts`:
+`tests/nuxt/boxFilter.spec.ts`:
 
 ```ts
 import { describe, expect, it } from 'vitest'
@@ -1046,13 +1046,13 @@ describe('boxFilter', () => {
 
 - [ ] **Step 8: Run the tests**
 
-Run: `pnpm test tests/unit/boxFilter.spec.ts`
+Run: `pnpm test tests/nuxt/boxFilter.spec.ts`
 Expected: PASS, 5 tests. If the quote-stripping test fails, the filter builder is injectable — fix it before moving on.
 
 - [ ] **Step 9: Commit**
 
 ```bash
-git add app/queries/ tests/unit/boxFilter.spec.ts
+git add app/queries/ tests/nuxt/boxFilter.spec.ts
 git commit -m "Add query modules for each collection"
 ```
 
@@ -1641,7 +1641,7 @@ signed-in member.
 git rm tests/e2e/smoke.spec.ts
 ```
 
-`tests/unit/smoke.spec.ts` is untouched — it mounts `index.vue` directly, needs
+`tests/nuxt/smoke.spec.ts` is untouched — it mounts `index.vue` directly, needs
 no session, and still guards the Nuxt test harness.
 
 - [ ] **Step 5: Ignore the stored credentials**

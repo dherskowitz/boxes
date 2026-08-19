@@ -41,7 +41,7 @@ A label whose QR encodes the wrong origin is worse than no label: it is printed,
 
 **Files:**
 - Create: `app/utils/qrPayload.ts`, `app/components/QrCode.vue`
-- Test: `tests/unit/qrPayload.spec.ts`
+- Test: `tests/nuxt/qrPayload.spec.ts`
 
 **Interfaces:**
 - Consumes: `qrcode`.
@@ -85,7 +85,7 @@ The two throwing cases are the point. A label encoding `/box/` or a relative pat
 
 - [ ] **Step 2: Run and watch it fail**
 
-Run: `pnpm test tests/unit/qrPayload.spec.ts`
+Run: `pnpm test tests/nuxt/qrPayload.spec.ts`
 Expected: FAIL — cannot resolve `~/utils/qrPayload`.
 
 - [ ] **Step 3: Implement**
@@ -116,7 +116,7 @@ export function boxQrUrl(qrId: string, origin: string): string {
 - [ ] **Step 5: Commit**
 
 ```bash
-git add app/utils/qrPayload.ts app/components/QrCode.vue tests/unit/qrPayload.spec.ts
+git add app/utils/qrPayload.ts app/components/QrCode.vue tests/nuxt/qrPayload.spec.ts
 git commit -m "Add QR payload builder and code component"
 ```
 
@@ -274,7 +274,7 @@ Camera behaviour cannot be meaningfully driven in Playwright without a fake devi
 - [ ] **Step 6: Commit**
 
 ```bash
-git add app/components/QrScanner.vue app/utils/qrPayload.ts tests/unit/qrPayload.spec.ts
+git add app/components/QrScanner.vue app/utils/qrPayload.ts tests/nuxt/qrPayload.spec.ts
 git commit -m "Add in-app QR scanner with strict payload validation"
 ```
 
