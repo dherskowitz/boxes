@@ -3,14 +3,14 @@
 Mobile-first PWA for tracking items in physical storage boxes. Each box gets a printable QR code; scanning it opens that box's item list.
 
 **Read `docs/storage-app-prd.md` before implementing any feature.**
-`docs/pocketbase-schema.md` is the live schema — collections already exist, do not modify `apps` / `app_memberships`.
+`docs/pocketbase-schema.md` is the human-readable schema reference; `pb_migrations/` is the source of truth. Never modify the shared `apps` / `app_memberships` collections.
 
 ## Stack
 
 - Nuxt 4, SPA mode (`ssr: false`) — app code lives in `app/`
 - Nuxt UI 4 + Tailwind 4, icons via `@nuxt/icon`
 - `@vite-pwa/nuxt` for the service worker
-- PocketBase (separate host) — auth, database, file storage
+- PocketBase 0.39.11 — auth, database, file storage
 - `@peterbud/nuxt-query` / TanStack Query for server state
 - Package manager: **pnpm**. Never npm or yarn.
 
@@ -26,14 +26,38 @@ Admin dashboard: <http://localhost:8090/_/> — `dev@local.test` / `devpassword1
 Local-only credentials, bound to loopback. `docker compose down -v` resets the
 instance to a clean migrated state.
 
-`pb_migrations/` is the schema source of truth — it recreates every `storage_*`
-collection, creates `apps` / `app_memberships` only if absent, and seeds the
-`apps` row with `key = "storage"`. Import runs in extend mode, so unrelated
-collections on a shared instance are never touched.
+### Schema changes
 
-**Schema changes are made in the PocketBase admin UI, then committed.**
-PocketBase's `--automigrate` writes a new file into `pb_migrations/` for every
-dashboard change; commit that file. Never hand-edit an applied migration.
+`pb_migrations/` recreates every `storage_*` collection, creates
+`apps` / `app_memberships` only if absent, and seeds the `apps` row with
+`key = "storage"`. Import runs in extend mode, so unrelated collections on a
+shared instance are never touched.
+
+Schema edits are made in a PocketBase admin UI, then captured:
+
+```bash
+python3 scripts/pb-snapshot.py <url>   # rewrites the migration from a live instance
+git diff pb_migrations/                # should show only the change you made
+```
+
+The snapshot strips per-instance timestamps, so a non-empty diff always means a
+real schema change. Never hand-edit the generated migration.
+
+## The loop
+
+A task is not done until this is green.
+
+```bash
+pnpm lint        # eslint
+pnpm test        # vitest, unit, runs in the Nuxt environment
+pnpm test:e2e    # playwright, boots and stops its own dev server
+```
+
+- Write the failing test first. Watch it fail for the right reason, then make it pass.
+- Run the loop after every meaningful edit, not once at the end.
+- Never report success on a red loop. Never skip or `.only` a test to get to green.
+- If a test is wrong, say so and explain why before changing it.
+- Don't leave `pnpm dev` running to "verify" — `test:e2e` manages its own server, and a stale one on `:3000` gets reused and produces confusing results.
 
 ## Rules
 
@@ -42,16 +66,32 @@ dashboard change; commit that file. Never hand-edit an applied migration.
 
 ### PocketBase
 
-- The PocketBase URL comes from `runtimeConfig.public.pocketbaseUrl` (`NUXT_PUBLIC_POCKETBASE_URL`). Never hardcode a URL or commit credentials.
+- The URL comes from `runtimeConfig.public.pocketbaseUrl` (`NUXT_PUBLIC_POCKETBASE_URL`). Never hardcode a URL or commit credentials.
 - **All reads and writes go through nuxt-query** (`useQuery` / `useMutation`). Never call `pb.collection().getList()` directly from a component — bypassing the query cache breaks offline reads.
-- **Client-side permission checks are UX only.** Hiding an Edit button is not access control; PocketBase API rules are the real guard. Never assume a check in the UI makes an operation safe.
+- **Client-side permission checks are UX only.** Hiding an Edit button is not access control; the API rules are the real guard. Never assume a check in the UI makes an operation safe.
 - **Always set the ownership field on create.** `created_by` on boxes, items and voice notes, `user` on comments — all must equal the authed user id. The create rules compare `@request.body.<field> = @request.auth.id`, and an omitted field resolves to empty and fails.
 - **Never include an ownership field in an update.** The update rules use `:isset = false`, which rejects the payload if `created_by` / `user` is present *at all* — even set to the correct value. Send only changed fields; never spread a fetched record into `update()`.
+- Paginate every list. Use `perPage` and `expand` for relations — never fetch all records to filter or join them client-side.
+- A deployed PocketBase must not sit behind Cloudflare Access on `/api/*`; browsers cannot complete a CORS preflight through it. Protect `/_/` instead.
 
 ### UI
 
 - Use Nuxt UI components (`UButton`, `UModal`, `UInput`, `UCard`, …) before hand-rolling Tailwind. Reach for raw markup only when no component fits.
-- Compress images with `browser-image-compression` before uploading to PocketBase. Never upload a raw camera file.
+- Compress images with `browser-image-compression` before uploading. Never upload a raw camera file.
+- Every screen needs a loading state and an empty state. Both are reachable on a phone with a slow connection, which is the primary target.
+- Screenshot any screen you build and look at it before calling it done. Check the narrow viewport for clipped text and content under the safe area.
+
+### TypeScript
+
+- No `any`. If a type is genuinely unknown, use `unknown` and narrow it.
+- No `as` to silence an error, and no non-null `!`. Fix the type or narrow properly.
+- No `@ts-expect-error` without a comment naming the reason.
+
+### Error handling
+
+- No empty `catch`, no `catch { console.log(e) }`. Handle it meaningfully or let it propagate.
+- PocketBase throws `ClientResponseError`; surface its message to the user rather than a generic "Something went wrong". A 403 usually means an API rule rejected the payload — check the ownership-field rules above before assuming a bug.
+- Never swallow a failed mutation. If a write fails, the UI must say so and leave the user somewhere recoverable.
 
 ### Commits
 
@@ -60,8 +100,25 @@ dashboard change; commit that file. Never hand-edit an applied migration.
 
 ### Tests
 
-- Every feature ships with tests. Aim for full coverage: unit tests for composables and utils, e2e tests for user flows.
+- Every feature ships with tests: unit for composables and utils, e2e for user flows.
 - Write the test before or alongside the implementation, never as a follow-up commit.
-- Unit: `pnpm test` (Vitest, `tests/unit/*.spec.ts`, runs in the Nuxt environment).
-- E2E: `pnpm test:e2e` (Playwright, `tests/e2e/*.spec.ts`, emulates Pixel 7 — this is a mobile-first app).
-- Lint: `pnpm lint`.
+- E2E runs against the local PocketBase, never a hosted instance. Test the unhappy paths deliberately: offline read, expired session, duplicate submit.
+- Use realistic seed data — real box and item names, long titles, empty lists. Never "Test User" or lorem ipsum.
+
+## Ask before you assume
+
+If a task leaves something open — which screen, what happens on failure, whether it needs a schema change — ask. One question up front is cheaper than half a day in the wrong direction.
+
+- Ask when the request could reasonably mean two different things.
+- Ask before changing the PocketBase schema or an API rule.
+- Do not invent product decisions, copy, or acceptance criteria.
+- Do not widen scope past what was asked. Note the adjacent thing you spotted; don't fix it unprompted.
+- If you had to assume something you could not resolve, say so explicitly in your summary.
+
+## Keeping this file current
+
+This file is a failure log, not a wishlist. Every line exists because something went wrong at least once.
+
+When you get corrected, or discover something about this repo that wasn't written down, add one line in the imperative describing the correct behaviour, and include it in the same commit. Keep it specific to this repo — general advice belongs nowhere.
+
+Keep this file under 200 lines. It loads into every session, and long context makes you less reliable, not more.
