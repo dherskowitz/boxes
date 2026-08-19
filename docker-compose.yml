@@ -1,8 +1,13 @@
+# Local development only. Binds to loopback and seeds a throwaway superuser —
+# do not use this file to run a public instance.
 services:
   pocketbase:
     image: ghcr.io/muchobien/pocketbase:0.39.11
     ports:
-      - "8090:8090"
+      - "127.0.0.1:8090:8090"
+    environment:
+      PB_ADMIN_EMAIL: ${PB_ADMIN_EMAIL:-dev@local.test}
+      PB_ADMIN_PASSWORD: ${PB_ADMIN_PASSWORD:-devpassword123}
     volumes:
       - ./pb_migrations:/pb_migrations
       - pb_data:/pb_data

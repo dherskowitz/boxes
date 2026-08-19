@@ -21,7 +21,7 @@ This app runs on an existing multi-app PocketBase instance. It reuses the shared
 | `role` | Select: owner / admin / member / reader (Single) |
 | `enabled` | Bool |
 
-**Setup step:** add a row to `apps` with `key = "storage"` and `active = true` before building anything else.
+**Setup step:** handled automatically — the migration in `pb_migrations/` seeds the `apps` row with `key = "storage"` and `active = true` if it is missing.
 
 ---
 

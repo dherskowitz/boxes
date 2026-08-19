@@ -18,8 +18,13 @@ Mobile-first PWA for tracking items in physical storage boxes. Each box gets a p
 
 ```bash
 docker compose up -d   # PocketBase on :8090, migrations auto-apply
-pnpm dev
+pnpm dev               # set NUXT_PUBLIC_POCKETBASE_URL=http://localhost:8090 in .env first
 ```
+
+Admin dashboard: <http://localhost:8090/_/> — `dev@local.test` / `devpassword123`
+(seeded by compose; override with `PB_ADMIN_EMAIL` / `PB_ADMIN_PASSWORD`).
+Local-only credentials, bound to loopback. `docker compose down -v` resets the
+instance to a clean migrated state.
 
 `pb_migrations/` is the schema source of truth — it recreates every `storage_*`
 collection, creates `apps` / `app_memberships` only if absent, and seeds the

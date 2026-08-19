@@ -34,12 +34,25 @@ No separate signup/invite flow is in scope — membership provisioning happens o
 
 ## 5. Tech Stack
 
-- **Frontend framework**: Nuxt 3, SPA mode (`ssr: false`)
+- **Frontend framework**: Nuxt 4, SPA mode (`ssr: false`)
 - **PWA tooling**: `@vite-pwa/nuxt` (Workbox-based service worker)
-- **Backend**: PocketBase (already running, separate host) — auth, database, file storage. Schema defined in the accompanying `pocketbase-schema.md`; do not modify existing `apps`/`app_memberships` collections, only add the `storage_*` collections described there.
+- **Backend**: PocketBase — auth, database, file storage. The schema is owned by `pb_migrations/` in this repo (see §5.1); `pocketbase-schema.md` remains the human-readable reference. Never modify the shared `apps`/`app_memberships` collections.
 - **QR generation**: `qrcode` npm package (client-side generation of the box's QR image from its `qr_id`)
-- **QR scanning**: `qr-scanner` or `html5-qrcode` npm package (camera access)
-- **Hosting**: static frontend (Vercel or Netlify); PocketBase hosted separately — assume CORS is already configured to allow the frontend's origin.
+- **QR scanning**: `vue-qrcode-reader` npm package (camera access)
+- **Server state**: `@peterbud/nuxt-query` (TanStack Query) — all PocketBase reads and writes go through it so the offline read cache stays authoritative.
+- **Image handling**: `browser-image-compression` — photos are compressed client-side before upload.
+- **Hosting**: static frontend (Vercel or Netlify); PocketBase hosted separately. The deployed PocketBase must not sit behind Cloudflare Access or any other edge auth on `/api/*` — browsers cannot complete a CORS preflight through it. Protect `/_/` (the admin dashboard) instead.
+
+### 5.1 Schema provisioning
+
+`pb_migrations/` is the source of truth for the schema. It recreates every
+`storage_*` collection, creates the shared `apps`/`app_memberships` collections
+only when absent, and seeds the `apps` row with `key = "storage"`. Import runs
+in extend mode, so collections belonging to other apps on a shared instance are
+never touched.
+
+- Local development: `docker compose up -d` starts PocketBase on `:8090` with the migrations mounted and applied automatically.
+- Schema changes are made in the PocketBase admin UI, then captured with `python3 scripts/pb-snapshot.py <url>` and committed.
 
 ## 6. Data Model
 
@@ -52,7 +65,7 @@ See `pocketbase-schema.md` for full field definitions and API rules. Summary:
 - `storage_box_permissions` — box, user, role (editor) — sparse override table for edit access beyond the creator
 - `storage_item_voice_notes` (v2, not built in v1) — item (relation), audio file, label, created_by — multiple recordings per item
 
-All PocketBase collections listed above have been created and their API rules configured — this is a completed prerequisite, not a task for the implementer. Frontend work can proceed directly against the live schema.
+These collections and their API rules are provisioned by `pb_migrations/` (§5.1), so a fresh PocketBase instance is fully set up by starting it. The API rules are the real access control — see §4 — and the frontend must satisfy them: ownership fields (`created_by`, and `user` on comments) are required on create and rejected on update.
 
 ## 7. Functional Requirements
 
@@ -99,7 +112,7 @@ All PocketBase collections listed above have been created and their API rules co
 - A box or item can have zero or more tags.
 - Renaming a tag (editing `storage_tags.name`) updates its display everywhere it's applied, since it's a relation, not a copied string.
 - The box index page and search results support filtering by one or more tags (in addition to free-text search).
-- Any enabled app member can create, rename, or delete tags — there's no separate tag-admin role in v1 (see open question in `pocketbase-schema.md` if this needs tightening later).
+- Any enabled app member can create or rename tags. **Deleting** a tag requires an `app_memberships.role` of `owner` or `admin`, since a delete strips the tag from every box and item that had it applied.
 - Deleting a tag removes it from any boxes/items that had it applied (no orphaned data, no confirmation-cascade complexity beyond a simple "this tag is used on N items, delete anyway?" prompt).
 
 ### 7.8 Offline support (reads only, v1)
