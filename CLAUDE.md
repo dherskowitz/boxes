@@ -21,6 +21,17 @@ docker compose up -d   # PocketBase on :8090, migrations auto-apply
 pnpm dev               # set NUXT_PUBLIC_POCKETBASE_URL=http://localhost:8090 in .env first
 ```
 
+Seed realistic fixture data (idempotent, local only):
+
+```bash
+python3 scripts/pb-seed.py http://localhost:8090
+```
+
+Accounts: `dana@local.test` (owner, creates the boxes), `sam@local.test`
+(member, editor on one box), `rae@local.test` (member, read-only),
+`nobody@local.test` (no membership — the access-denied case). Password for all:
+`storagedev123`.
+
 Admin dashboard: <http://localhost:8090/_/> — `dev@local.test` / `devpassword123`
 (seeded by compose; override with `PB_ADMIN_EMAIL` / `PB_ADMIN_PASSWORD`).
 Local-only credentials, bound to loopback. `docker compose down -v` resets the
