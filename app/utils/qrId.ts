@@ -18,7 +18,7 @@ export function newQrId(): string {
     crypto.getRandomValues(bytes)
     for (const byte of bytes) {
       if (byte < limit && out.length < LENGTH) {
-        out.push(ALPHABET[byte % ALPHABET.length])
+        out.push(ALPHABET.charAt(byte % ALPHABET.length))
       }
     }
   }
