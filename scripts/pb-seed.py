@@ -10,6 +10,7 @@ import json
 import os
 import sys
 import urllib.error
+import urllib.parse
 import urllib.request
 
 PASSWORD = "storagedev123"
@@ -74,7 +75,7 @@ BOXES = [
 ]
 
 
-def call(base, path, token=None, data=None, method=None, files=None):
+def call(base, path, token=None, data=None, method=None):
     body = json.dumps(data).encode() if data is not None else None
     req = urllib.request.Request(
         base + path, data=body, method=method or ("POST" if body else "GET")
@@ -92,20 +93,35 @@ def call(base, path, token=None, data=None, method=None, files=None):
         ) from exc
 
 
-def wipe(base, token, collection):
+def wipe(base, token, collection, filter_expr=None):
+    qs = "?perPage=200"
+    if filter_expr:
+        qs += "&filter=" + urllib.parse.quote(filter_expr)
     while True:
-        page = call(base, f"/collections/{collection}/records?perPage=200", token)
+        page = call(base, f"/collections/{collection}/records{qs}", token)
         if not page.get("items"):
             return
         for record in page["items"]:
             call(base, f"/collections/{collection}/records/{record['id']}", token, method="DELETE")
 
 
+def list_all(base, token, path):
+    sep = "&" if "?" in path else "?"
+    items = []
+    page = 1
+    while True:
+        result = call(base, f"{path}{sep}page={page}", token)
+        items.extend(result.get("items", []))
+        if page >= result.get("totalPages", 1):
+            return items
+        page += 1
+
+
 def main():
     if len(sys.argv) != 2:
         raise SystemExit(__doc__)
     root = sys.argv[1].rstrip("/")
-    if "localhost" not in root and "127.0.0.1" not in root:
+    if urllib.parse.urlparse(root).hostname not in ("localhost", "127.0.0.1"):
         raise SystemExit(f"refusing to seed a non-local instance: {root}")
     base = root + "/api"
     token = call(
@@ -117,18 +133,30 @@ def main():
         },
     )["token"]
 
+    # Resolve the seeded accounts' ids up front so the app_memberships wipe
+    # below can be scoped to them. This is a shared, multi-app PocketBase
+    # instance (PRD §4) — deleting every app_memberships row would silently
+    # revoke access for every other app on the instance. Do not "simplify"
+    # this back to a blanket wipe() of app_memberships.
+    local_user_ids = [
+        user["id"]
+        for user in list_all(base, token, "/collections/users/records?perPage=200")
+        if user["email"].endswith("@local.test")
+    ]
+
     for collection in (
         "storage_comments",
         "storage_box_permissions",
         "storage_items",
         "storage_boxes",
         "storage_tags",
-        "app_memberships",
     ):
         wipe(base, token, collection)
-    for user in call(base, "/collections/users/records?perPage=200", token).get("items", []):
-        if user["email"].endswith("@local.test"):
-            call(base, f"/collections/users/records/{user['id']}", token, method="DELETE")
+    if local_user_ids:
+        membership_filter = " || ".join(f'user = "{uid}"' for uid in local_user_ids)
+        wipe(base, token, "app_memberships", filter_expr=membership_filter)
+    for user_id in local_user_ids:
+        call(base, f"/collections/users/records/{user_id}", token, method="DELETE")
 
     app_id = call(base, "/collections/apps/records", token)["items"][0]["id"]
 
