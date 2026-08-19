@@ -1036,7 +1036,7 @@ const STORAGE = [
         "autogeneratePattern": "",
         "help": "",
         "hidden": false,
-        "id": "_clone_2h53",
+        "id": "_clone_KCpT",
         "max": 0,
         "min": 0,
         "name": "title",
@@ -1051,7 +1051,7 @@ const STORAGE = [
         "autogeneratePattern": "",
         "help": "",
         "hidden": false,
-        "id": "_clone_mqna",
+        "id": "_clone_B3iB",
         "max": 0,
         "min": 0,
         "name": "location",
@@ -1065,7 +1065,7 @@ const STORAGE = [
       {
         "help": "",
         "hidden": false,
-        "id": "_clone_o0in",
+        "id": "_clone_padc",
         "maxSelect": 1,
         "name": "status",
         "presentable": false,
@@ -1134,15 +1134,19 @@ const STORAGE = [
         "type": "text"
       },
       {
+        "autogeneratePattern": "",
         "help": "",
         "hidden": false,
-        "id": "json2394296326",
-        "maxSize": 1,
+        "id": "text2394296326",
+        "max": 0,
+        "min": 0,
         "name": "month",
+        "pattern": "",
         "presentable": false,
+        "primaryKey": false,
         "required": false,
         "system": false,
-        "type": "json"
+        "type": "text"
       },
       {
         "help": "",
@@ -1173,7 +1177,7 @@ const STORAGE = [
     ],
     "indexes": [],
     "system": false,
-    "viewQuery": "SELECT REPLACE(m.month, '-', '') AS id, m.month AS month, CAST((SELECT COUNT(*) FROM storage_boxes b WHERE strftime('%Y-%m', b.created) = m.month) AS INTEGER) AS boxes_created, CAST((SELECT COUNT(*) FROM storage_items i WHERE strftime('%Y-%m', i.created) = m.month) AS INTEGER) AS items_created FROM ( SELECT DISTINCT CAST(strftime('%Y-%m', created) AS TEXT) AS month FROM storage_boxes UNION SELECT DISTINCT CAST(strftime('%Y-%m', created) AS TEXT) AS month FROM storage_items ) m ORDER BY m.month"
+    "viewQuery": "SELECT REPLACE(m.month, '-', '') AS id, CAST(m.month AS TEXT) AS month, CAST((SELECT COUNT(*) FROM storage_boxes b WHERE strftime('%Y-%m', b.created) = m.month) AS INTEGER) AS boxes_created, CAST((SELECT COUNT(*) FROM storage_items i WHERE strftime('%Y-%m', i.created) = m.month) AS INTEGER) AS items_created FROM ( SELECT DISTINCT CAST(strftime('%Y-%m', created) AS TEXT) AS month FROM storage_boxes UNION SELECT DISTINCT CAST(strftime('%Y-%m', created) AS TEXT) AS month FROM storage_items ) m ORDER BY m.month"
   },
   {
     "id": "pbc_328497782",
@@ -1204,7 +1208,7 @@ const STORAGE = [
         "autogeneratePattern": "",
         "help": "",
         "hidden": false,
-        "id": "_clone_ggL8",
+        "id": "_clone_jE05",
         "max": 0,
         "min": 0,
         "name": "name",
@@ -1219,7 +1223,7 @@ const STORAGE = [
         "autogeneratePattern": "",
         "help": "",
         "hidden": false,
-        "id": "_clone_lja0",
+        "id": "_clone_lVjZ",
         "max": 0,
         "min": 0,
         "name": "color",

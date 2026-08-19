@@ -73,7 +73,7 @@ VIEWS = {
     "storage_report_growth": """
         SELECT
           REPLACE(m.month, '-', '') AS id,
-          m.month AS month,
+          CAST(m.month AS TEXT) AS month,
           CAST((SELECT COUNT(*) FROM storage_boxes b
              WHERE strftime('%Y-%m', b.created) = m.month) AS INTEGER) AS boxes_created,
           CAST((SELECT COUNT(*) FROM storage_items i
