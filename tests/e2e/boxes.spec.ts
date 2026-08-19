@@ -15,6 +15,12 @@ function pocketbaseUrl(): string {
   return url.trim()
 }
 
+async function authedPb(): Promise<PocketBase> {
+  const pb = new PocketBase(pocketbaseUrl())
+  await pb.collection('users').authWithPassword('dana@local.test', 'storagedev123')
+  return pb
+}
+
 test('lists active boxes and hides archived ones by default', async ({ page }) => {
   await page.goto('/')
   await expect(page.getByText('Winter coats and boots')).toBeVisible()
@@ -36,8 +42,7 @@ test('opens a box from its card', async ({ page }) => {
 })
 
 test('shows the empty state when every active box is archived', async ({ page }) => {
-  const pb = new PocketBase(pocketbaseUrl())
-  await pb.collection('users').authWithPassword('dana@local.test', 'storagedev123')
+  const pb = await authedPb()
   const active = await pb.collection('storage_boxes').getFullList({ filter: 'status = "active"' })
   try {
     for (const box of active) {
@@ -50,4 +55,34 @@ test('shows the empty state when every active box is archived', async ({ page })
       await pb.collection('storage_boxes').update(box.id, { status: 'active' })
     }
   }
+})
+
+test('creates a box with only a title and lands on its page', async ({ page }) => {
+  await page.goto('/box/new')
+  await page.getByLabel('Title').fill('Loft bedding and spare pillows')
+  await page.getByRole('button', { name: 'Create box' }).click()
+  await expect(page).toHaveURL(/\/box\/[a-z0-9]{8}$/)
+  await expect(page.getByText('Loft bedding and spare pillows')).toBeVisible()
+
+  const qrId = new URL(page.url()).pathname.split('/').pop()
+  const pb = await authedPb()
+  const created = await pb.collection('storage_boxes').getFirstListItem(pb.filter('qr_id = {:qrId}', { qrId }))
+  await pb.collection('storage_boxes').delete(created.id)
+})
+
+test('disables the submit button while the create request is pending', async ({ page }) => {
+  await page.goto('/box/new')
+  await page.getByLabel('Title').fill('Loft bedding, take two')
+  const button = page.getByRole('button', { name: 'Create box' })
+  await button.click()
+  // The pending state disables the button synchronously, before the request
+  // resolves — this, not a race on a second click, is what actually prevents
+  // a duplicate box on a fast double-tap.
+  await expect(button).toBeDisabled()
+  await expect(page).toHaveURL(/\/box\/[a-z0-9]{8}$/)
+
+  const qrId = new URL(page.url()).pathname.split('/').pop()
+  const pb = await authedPb()
+  const created = await pb.collection('storage_boxes').getFirstListItem(pb.filter('qr_id = {:qrId}', { qrId }))
+  await pb.collection('storage_boxes').delete(created.id)
 })
