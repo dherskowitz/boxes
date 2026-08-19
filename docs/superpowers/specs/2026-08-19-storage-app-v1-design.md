@@ -129,7 +129,64 @@ for the reporting screen. After wave 0, **no feature agent touches
 `package.json` or `pnpm-lock.yaml`**, which removes the one merge conflict that
 cannot be resolved by reading the diff.
 
-### 3.11 Schema change — report view collections
+### 3.11 Schema change — view collections
+
+Two related additions, both **view** collections (read-only SQL projections with
+no write surface), both additive `storage_*` collections. No shared collection
+is modified.
+
+#### `storage_app_users` — the member directory
+
+Verified against the running instance: `users.listRule` and `users.viewRule` are
+both `id = @request.auth.id`, so a user can only ever see themselves. Measured
+consequences — `?expand=created_by` on a box and `?expand=user` on a comment both
+return `expand: {}` for any record authored by someone else, and listing `users`
+returns exactly one row. Separately, `app_memberships` has **no API rules at all**,
+so it is superuser-only and a client cannot read even its own membership row.
+
+That breaks PRD §7.5 (comments show their author), §7.2 (sharing page picks a user
+to grant editor to), and §7.1 (client-side access-denied state).
+
+The fix is one view collection scoped to this app:
+
+```sql
+SELECT
+  u.id   AS id,
+  u.name AS name,
+  m.role AS role
+FROM users u
+JOIN app_memberships m ON m.user = u.id
+JOIN apps a ON a.id IN (SELECT value FROM json_each(m.app))
+WHERE m.enabled = TRUE AND a.key = 'storage'
+```
+
+`app` is a multi-relation, hence the `json_each` join. `listRule`/`viewRule` use
+the standard enabled-membership gate.
+
+This single collection answers four questions the app could not otherwise ask:
+is the current user a member, what is their role (gating tag delete), what is a
+given user id's display name (comments, creator labels), and who can be granted
+editor rights. The client fetches it once and maps `id → name` locally; the
+group is small and trusted, so a directory fetch is cheaper than per-record
+expansion would have been anyway.
+
+Confirmed by probe: a member sees every member with their role; a non-member and
+an anonymous caller both receive an empty set. Note that a failing **list** rule
+in PocketBase filters rows rather than returning 403, so "empty" is the correct
+denial signal here, not an error.
+
+#### `storage_report_*` — reporting aggregates
+
+`storage_report_box_fill`, `storage_report_tag_usage`, and
+`storage_report_growth` per PRD §6, gated by the same membership rule.
+
+#### Procedure
+
+All four are created via the admin API against the local instance, verified in
+`http://localhost:8090/_/`, then captured with `python3 scripts/pb-snapshot.py`.
+The generated migration is never hand-edited. The diff is reviewed before wave 1
+starts. These are the only schema changes in the plan; any further change stops
+and asks.
 
 The three view collections in PRD §6 do not exist yet. Wave 0 creates
 `storage_report_box_fill`, `storage_report_tag_usage`, and
@@ -194,7 +251,21 @@ Each adds exactly one section or link to a wave 1 page, in a declared region.
 - **QR scanner library** → `vue-qrcode-reader`. The PRD is internally inconsistent: §5 specifies `vue-qrcode-reader`, which is what `package.json` installs, while §7.3 names `qr-scanner`/`html5-qrcode`. Going with the installed one.
 - **`storage_item_voice_notes`** → already present in `pb_migrations/` even though PRD §3 says not to scaffold it in v1. Left exactly as is; no code references it.
 - **Merge flow** → each agent finishes in its worktree; the full loop runs on the merged result before it lands on `main`; a summary follows each wave.
-- **Assumed without confirmation**: PocketBase's generated back-relation names (`app_memberships_via_user`, `storage_box_permissions_via_user`) resolve as written in `pocketbase-schema.md`. The schema doc flags this as unverified. Wave 0 verifies them against the running instance before any rule is depended on, and reports if they differ.
+### 7.1 Verified against the running instance
+
+These were probed during planning, not assumed. `docs/pocketbase-schema.md` is
+stale on several points; **`pb_migrations/` is the source of truth** and the
+plan follows it.
+
+- Back-relations `app_memberships_via_user` and `storage_box_permissions_via_user` resolve correctly. The schema doc's "Known Uncertainty" section is resolved — nothing needs to plan around it.
+- The permission matrix behaves as specified: a plain member lists every box, is blocked from editing another user's box (404), and is blocked from adding an item to it (400).
+- `app_memberships.role` values are `owner` / `admin` / `member` / **`readonly`** — the schema doc says `reader`, which is wrong.
+- `storage_boxes.description`, `storage_items.description`, and `storage_items.notes` are **`editor`** (rich text) fields, not plain text. Barebones UI uses a plain `UTextarea` against them.
+- **`storage_boxes.status` has no default.** Every box create must send `status: 'active'` explicitly, or the record lands with an empty status and vanishes from the index filter. This is the single easiest bug to ship in this codebase.
+- `storage_boxes` **delete** is creator-only; a granted editor can edit a box and delete its items, but cannot delete the box itself.
+- `storage_items` **create** requires box creator or granted editor, so a plain member cannot add items to someone else's box.
+- `images` `maxSelect` is 15 on boxes and 99 on items.
+- `storage_tags` delete is already gated on `owner`/`admin` in the migration, matching PRD §7.7 with no rule change needed.
 
 ## 8. Testing
 
