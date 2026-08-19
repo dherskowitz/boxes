@@ -14,6 +14,22 @@ Mobile-first PWA for tracking items in physical storage boxes. Each box gets a p
 - `@peterbud/nuxt-query` / TanStack Query for server state
 - Package manager: **pnpm**. Never npm or yarn.
 
+## Local development
+
+```bash
+docker compose up -d   # PocketBase on :8090, migrations auto-apply
+pnpm dev
+```
+
+`pb_migrations/` is the schema source of truth — it recreates every `storage_*`
+collection, creates `apps` / `app_memberships` only if absent, and seeds the
+`apps` row with `key = "storage"`. Import runs in extend mode, so unrelated
+collections on a shared instance are never touched.
+
+**Schema changes are made in the PocketBase admin UI, then committed.**
+PocketBase's `--automigrate` writes a new file into `pb_migrations/` for every
+dashboard change; commit that file. Never hand-edit an applied migration.
+
 ## Rules
 
 - v1 is offline **reads** only. No offline writes, no notifications, no voice notes — see PRD §3.
