@@ -60,6 +60,7 @@ A task is not done until this is green.
 
 ```bash
 pnpm lint        # eslint
+pnpm typecheck   # vue-tsc, catches the any/as/! rules eslint does not
 pnpm test        # vitest, unit, runs in the Nuxt environment
 pnpm test:e2e    # playwright, boots and stops its own dev server
 ```
@@ -83,6 +84,7 @@ pnpm test:e2e    # playwright, boots and stops its own dev server
 - **Always set the ownership field on create.** `created_by` on boxes, items and voice notes, `user` on comments — all must equal the authed user id. The create rules compare `@request.body.<field> = @request.auth.id`, and an omitted field resolves to empty and fails.
 - **Never include an ownership field in an update.** The update rules use `:isset = false`, which rejects the payload if `created_by` / `user` is present *at all* — even set to the correct value. Send only changed fields; never spread a fetched record into `update()`.
 - Paginate every list. Use `perPage` and `expand` for relations — never fetch all records to filter or join them client-side.
+- `useTags()` and `useAppUsers()` are the only deliberate `getFullList` exceptions — small bounded vocab/roster every picker needs whole. Leave them unpaginated.
 - `app/queries/` is auto-imported via `imports.dirs` in `nuxt.config.ts`. Adding a new top-level `app/` directory does **not** auto-import it — only `composables/` and `utils/` are scanned by default.
 - A deployed PocketBase must not sit behind Cloudflare Access on `/api/*`; browsers cannot complete a CORS preflight through it. Protect `/_/` instead.
 
