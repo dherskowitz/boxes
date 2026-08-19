@@ -31,3 +31,4 @@ tests/e2e/.auth/
 
 # PocketBase local data (docker uses a named volume, but just in case)
 pb_data
+.worktrees/
