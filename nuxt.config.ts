@@ -26,6 +26,12 @@ export default defineNuxtConfig({
     autoImports: ['useQuery', 'useMutation', 'useQueryClient']
   },
 
+  // `composables/` and `utils/` are scanned by default; `queries/` is not.
+  // Every query module is consumed like a composable, so scan it too.
+  imports: {
+    dirs: ['queries']
+  },
+
   pwa: {
     registerType: 'autoUpdate',
     manifest: {
