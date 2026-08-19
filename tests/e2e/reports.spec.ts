@@ -70,3 +70,38 @@ test('ranks tag usage by combined box and item count', async ({ page }) => {
     lastIndex = index
   }
 })
+
+test('groups boxes by location in the donut, including a distinct archived split', async ({ page }) => {
+  await page.goto('/reports')
+  const chart = page.getByTestId('locations-chart')
+  await expect(chart).toBeVisible({ timeout: CHART_TIMEOUT })
+  const chartText = await chart.innerText()
+
+  // Each of the 5 seeded boxes has a distinct location — one box per bucket.
+  for (const location of [
+    'Garage shelf A3',
+    'Basement under the stairs',
+    'Office closet, top shelf',
+    'Garage shelf B1',
+    'Attic'
+  ]) {
+    expect(chartText).toContain(location)
+  }
+
+  // seedbox5 is archived — it must still count toward the location total
+  // (Attic) but also be visible in the separate status split.
+  const statusChart = page.getByTestId('locations-status-chart')
+  await expect(statusChart).toBeVisible()
+  const statusText = await statusChart.innerText()
+  expect(statusText).toContain('Active (4)')
+  expect(statusText).toContain('Archived (1)')
+})
+
+test('bars the single seeded month of growth rather than rendering a blank area chart', async ({ page }) => {
+  await page.goto('/reports')
+  await expect(page.getByTestId('growth-single-month')).toBeVisible({ timeout: CHART_TIMEOUT })
+  const chart = page.getByTestId('growth-chart')
+  await expect(chart).toBeVisible()
+  const chartText = normalize(await chart.innerText())
+  expect(chartText).toContain('2026-08')
+})

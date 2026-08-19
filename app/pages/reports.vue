@@ -30,15 +30,24 @@ const {
   error: tagUsageError,
   refetch: refetchTagUsage
 } = useTagUsage()
-const isPending = computed(() => isBoxFillPending.value || isTagUsagePending.value)
-const isError = computed(() => isBoxFillError.value || isTagUsageError.value)
-const errorMessage = computed(() => pbError(boxFillError.value ?? tagUsageError.value))
+const {
+  data: growth,
+  isPending: isGrowthPending,
+  isError: isGrowthError,
+  error: growthError,
+  refetch: refetchGrowth
+} = useGrowth()
+
+const isPending = computed(() => isBoxFillPending.value || isTagUsagePending.value || isGrowthPending.value)
+const isError = computed(() => isBoxFillError.value || isTagUsageError.value || isGrowthError.value)
+const errorMessage = computed(() => pbError(boxFillError.value ?? tagUsageError.value ?? growthError.value))
 
 const totals = computed(() => reportTotals(boxFill.value, tagUsage.value))
 
 function retry() {
   refetchBoxFill()
   refetchTagUsage()
+  refetchGrowth()
 }
 </script>
 
@@ -65,7 +74,9 @@ function retry() {
     <template v-else>
       <ReportTotals :totals="totals" />
       <ReportItemsPerBox :box-fill="boxFill ?? []" />
+      <ReportLocations :box-fill="boxFill ?? []" />
       <ReportTagUsage :tag-usage="tagUsage ?? []" />
+      <ReportGrowth :growth="growth ?? []" />
     </template>
   </div>
 </template>
