@@ -17,10 +17,10 @@ describe('compressImage', () => {
 
   it('caps the long edge and the file size', async () => {
     await compressImage(fakeFile('coat.jpg', 4_000_000))
-    const options = compressMock.mock.calls[0][1]
-    expect(options.maxWidthOrHeight).toBe(1600)
-    expect(options.maxSizeMB).toBe(1)
-    expect(options.useWebWorker).toBe(true)
+    expect(compressMock).toHaveBeenCalledWith(
+      expect.any(File),
+      expect.objectContaining({ maxWidthOrHeight: 1600, maxSizeMB: 1, useWebWorker: true })
+    )
   })
 
   it('keeps the original filename so uploads stay recognisable', async () => {
