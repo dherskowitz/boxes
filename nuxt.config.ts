@@ -57,7 +57,12 @@ export default defineNuxtConfig({
           // match /api/collections/users/auth-with-password, so the auth
           // endpoint always hits the network — caching it would be a
           // security problem, not a feature.
-          urlPattern: /\/api\/collections\/storage_[^/]+\/records/,
+          // Anchored at the origin on purpose: Workbox skips a RegExp route
+          // for a cross-origin request unless the pattern matches from the
+          // start of the full URL, and PocketBase is always a different
+          // origin from the app. An unanchored pattern silently caches
+          // nothing.
+          urlPattern: /^https?:\/\/[^/]+\/api\/collections\/storage_[^/]+\/records/,
           handler: 'StaleWhileRevalidate',
           method: 'GET',
           options: {
@@ -67,7 +72,7 @@ export default defineNuxtConfig({
         },
         {
           // PocketBase file storage (box/item images).
-          urlPattern: /\/api\/files\//,
+          urlPattern: /^https?:\/\/[^/]+\/api\/files\//,
           handler: 'CacheFirst',
           method: 'GET',
           options: {
