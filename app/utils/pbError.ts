@@ -25,7 +25,14 @@ export function pbError(e: unknown): string {
       isFieldError(detail) ? [`${field}: ${detail.message}`] : []
     )
     if (fields.length > 0) return fields.join('; ')
-    if (e.status === 403) return 'You do not have permission to do that.'
+    if (e.status === 403) {
+      // Keep the server's wording — on this app a 403 is almost always an
+      // ownership-field mistake, and PocketBase names the rule that rejected it.
+      const detail = e.response?.message
+      return detail
+        ? `You do not have permission to do that. ${detail}`
+        : 'You do not have permission to do that.'
+    }
     return e.response?.message || e.message
   }
   if (e instanceof Error) return e.message
