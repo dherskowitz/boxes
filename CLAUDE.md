@@ -152,7 +152,7 @@ pnpm test:e2e    # playwright, boots and stops its own dev server
 - Put e2e fixture teardown in `test.afterEach`, not a `finally`: Playwright hard-kills a timed-out test and the `finally` never runs, leaving the fixture dirty for every later run.
 - Call `pb.autoCancellation(false)` on a test's PocketBase client. The SDK cancels concurrent requests to the same endpoint, so a parallel fixture build silently keeps only the last write — and the cancelled ones still land server-side afterwards.
 - happy-dom does not synthesise a `submit` from a click on a `type="submit"` button. In a unit test, `trigger('submit')` on the form.
-- `/reports` pulls in nuxt-charts and its first compile on a cold dev server can outlast the 15s expect timeout — an assertion that lands there needs a longer one, or it looks like a broken route.
+- `/reports` **and `/`** pull in nuxt-charts, and that first compile on a cold dev server can outlast the 15s expect timeout — an assertion landing on either needs a longer one, or it looks like a broken route. `auth.setup.ts` lands on `/` after signing in, so a flake there stops the whole suite.
 - Playwright blocks service workers (`playwright.config.ts`); only `offline.spec.ts` allows them. The dev service worker bypasses `page.route` stubs and serves a stale list back to a test that just wrote.
 - Offline reads cannot be verified under `pnpm dev` — the dev service worker precaches only `/` and its navigation allowlist is `/^\/$/`. Verify by hand against a build: see `docs/testing-offline.md`.
 - Use realistic seed data — real box and item names, long titles, empty lists. Never "Test User" or lorem ipsum.
