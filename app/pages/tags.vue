@@ -30,8 +30,13 @@ function cancelRename() {
 
 async function saveRename(tag: StorageTag) {
   renameError.value = ''
+  const name = normalizeTagName(editName.value)
+  if (!name) {
+    renameError.value = 'Tag name cannot be empty.'
+    return
+  }
   try {
-    await renameTag.mutateAsync({ id: tag.id, name: editName.value })
+    await renameTag.mutateAsync({ id: tag.id, name })
     editingId.value = ''
   } catch (e) {
     renameError.value = pbError(e)
