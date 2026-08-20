@@ -12,7 +12,8 @@
  */
 const model = defineModel<string[]>({ default: () => [] })
 
-const { data: tags, isPending } = useTags()
+const { data: tags, isPending, isError, error } = useTags()
+const errorMessage = computed(() => (error.value ? pbError(error.value) : ''))
 
 function isSelected(id: string): boolean {
   return model.value.includes(id)
@@ -27,6 +28,10 @@ function toggle(id: string) {
   <div v-if="isPending" data-testid="tag-filter-loading" class="flex flex-wrap gap-2">
     <USkeleton v-for="n in 4" :key="n" class="h-8 w-24" />
   </div>
+
+  <!-- Without this, a failed fetch leaves `tags` undefined and falls through
+       to the empty branch — telling the user there is no tag vocabulary. -->
+  <UAlert v-else-if="isError" title="Could not load tags" :description="errorMessage" />
 
   <!-- Nothing to filter by until the shared vocabulary has a tag in it, and an
        empty row of chips is only dead space on a phone. -->

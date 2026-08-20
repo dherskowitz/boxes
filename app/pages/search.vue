@@ -59,7 +59,10 @@ const errorMessage = computed(() => (error.value ? pbError(error.value) : ''))
 
     <SearchBar v-model="term" @submit="() => {}" />
 
-    <TagFilter v-model="tagIds" />
+    <!-- Only once there is a term: `searchFilter` short-circuits a blank term
+         to `1 = 2` before the tag clauses, so a chip selected on the idle
+         screen would be a control that visibly does nothing. -->
+    <TagFilter v-if="hasTerm" v-model="tagIds" />
 
     <div v-if="!hasTerm" data-testid="search-idle">
       <p>Search box titles, item titles, item descriptions and item notes.</p>
