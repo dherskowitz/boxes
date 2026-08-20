@@ -133,6 +133,9 @@ pnpm test:e2e    # playwright, boots and stops its own dev server
 - Every feature ships with tests: unit for composables and utils, e2e for user flows.
 - Write the test before or alongside the implementation, never as a follow-up commit.
 - E2E runs against the local PocketBase, never a hosted instance. Test the unhappy paths deliberately: offline read, expired session, duplicate submit.
+- `describe.configure({ mode: 'serial' })` only orders one file. Spec files run in parallel, so a test must never mutate a seeded record — create the boxes and items it writes to.
+- Put e2e fixture teardown in `test.afterEach`, not a `finally`: Playwright hard-kills a timed-out test and the `finally` never runs, leaving the fixture dirty for every later run.
+- Call `pb.autoCancellation(false)` on a test's PocketBase client. The SDK cancels concurrent requests to the same endpoint, so a parallel fixture build silently keeps only the last write — and the cancelled ones still land server-side afterwards.
 - Use realistic seed data — real box and item names, long titles, empty lists. Never "Test User" or lorem ipsum.
 
 ## Ask before you assume
