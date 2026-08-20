@@ -32,7 +32,11 @@ export interface BoxListFilters {
 }
 
 export interface ItemListFilters {
-  boxId: string
+  /** Omit to browse items across every box — /items does; box detail does not. */
+  boxId?: string
+  /** Free text over title, description and notes. Omit to match everything. */
+  term?: string
+  /** Tag ids; an item matches if it carries all of them. */
   tagIds?: string[]
   page?: number
 }
