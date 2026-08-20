@@ -62,6 +62,23 @@ test.describe('unauthenticated', () => {
     })
   }
 
+  test('refuses an empty submit and names both missing fields', async ({ page }) => {
+    await page.goto('/login')
+    await page.getByRole('button', { name: 'Sign in' }).click()
+    await expect(page.getByText('Enter your email address.')).toBeVisible()
+    await expect(page.getByText('Enter your password.')).toBeVisible()
+    await expect(page).toHaveURL(/\/login/)
+  })
+
+  test('refuses an email that is not an email', async ({ page }) => {
+    await page.goto('/login')
+    await page.getByLabel('Email').fill('dana.local.test')
+    await page.getByLabel('Password').fill('storagedev123')
+    await page.getByRole('button', { name: 'Sign in' }).click()
+    await expect(page.getByText('That does not look like an email address.')).toBeVisible()
+    await expect(page).toHaveURL(/\/login/)
+  })
+
   test('shows an error for a bad password', async ({ page }) => {
     await page.goto('/login')
     await page.getByLabel('Email').fill('dana@local.test')

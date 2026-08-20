@@ -54,7 +54,10 @@ describe('tags.vue — inline rename', () => {
     const wrapper = await mountSuspended(TagsPage)
     await wrapper.find('[data-testid="rename-tag-kitchen"]').trigger('click')
     await wrapper.find('input').setValue('   ')
-    await wrapper.findAll('button').find(b => b.text() === 'Save')?.trigger('click')
+    // Submit the form, not the button: happy-dom does not synthesise a submit
+    // event from a click on a type="submit" button, and the rename row is a
+    // UForm now — clicking Save here would assert nothing.
+    await wrapper.find('form').trigger('submit')
     await vi.waitFor(() => expect(wrapper.text()).toContain('Tag name cannot be empty.'))
 
     expect(renameMutateAsync).not.toHaveBeenCalled()
@@ -65,7 +68,7 @@ describe('tags.vue — inline rename', () => {
     const wrapper = await mountSuspended(TagsPage)
     await wrapper.find('[data-testid="rename-tag-kitchen"]').trigger('click')
     await wrapper.find('input').setValue('  Kitchenware  ')
-    await wrapper.findAll('button').find(b => b.text() === 'Save')?.trigger('click')
+    await wrapper.find('form').trigger('submit')
 
     await vi.waitFor(() =>
       expect(renameMutateAsync).toHaveBeenCalledWith({ id: 't_kitchen', name: 'kitchenware' })
