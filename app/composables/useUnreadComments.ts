@@ -33,17 +33,23 @@ export function countUnread(
 
 /**
  * PRD §7.5's in-app new-comment badge, backed by a per-item `localStorage`
- * timestamp — no schema change for what is only a badge. A browser with
- * storage disabled (private mode, quota exceeded) degrades to "no badge"
- * rather than crashing the item page.
+ * timestamp — no schema change for what is only a badge. A browser that
+ * refuses storage entirely (Safari private browsing, a managed browser with
+ * storage blocked) shows no badge at all.
  */
 export function useUnreadComments(itemId: Ref<string>, comments: Ref<StorageComment[] | undefined>) {
   const { userId } = useAuthUser()
+
+  // A failed read is not "never viewed": counting it that way pins the badge
+  // on permanently, since the write that would clear it throws too. Tracked
+  // as a flag so `countUnread` stays pure.
+  let storageAvailable = true
 
   function readLastViewed(): string | null {
     try {
       return localStorage.getItem(storageKey(itemId.value))
     } catch {
+      storageAvailable = false
       return null
     }
   }
@@ -53,7 +59,9 @@ export function useUnreadComments(itemId: Ref<string>, comments: Ref<StorageComm
   // must not retroactively zero out the badge this visit was meant to show.
   const lastViewed = readLastViewed()
 
-  return computed(() => countUnread(comments.value, lastViewed, userId.value))
+  return computed(() =>
+    storageAvailable ? countUnread(comments.value, lastViewed, userId.value) : 0
+  )
 }
 
 /** Call when the thread is viewed, to clear the badge. */
@@ -61,6 +69,7 @@ export function markItemRead(itemId: string): void {
   try {
     localStorage.setItem(storageKey(itemId), new Date().toISOString())
   } catch {
-    // Storage disabled — nothing to persist, badge just won't clear.
+    // Storage disabled — nothing to persist, and useUnreadComments shows no
+    // badge in that case rather than one that could never clear.
   }
 }
