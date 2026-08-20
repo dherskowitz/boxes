@@ -113,6 +113,7 @@ pnpm test:e2e    # playwright, boots and stops its own dev server
 - Every write mutation calls `assertOnline()` first, and mutations run with `networkMode: 'always'` (set once in `nuxt.config.ts`). TanStack's default pauses a mutation offline: `mutationFn` never runs and the promise never settles, so the button hangs with no message.
 - `useTags()` and `useAppUsers()` are the only deliberate `getFullList` exceptions — small bounded vocab/roster every picker needs whole. Leave them unpaginated.
 - `app/queries/` is auto-imported via `imports.dirs` in `nuxt.config.ts`. Adding a new top-level `app/` directory does **not** auto-import it — only `composables/` and `utils/` are scanned by default.
+- `login()` checks app membership against PocketBase directly, on purpose — the one read that must not go through nuxt-query, since a cached answer would let a revoked user in. Reject a non-member at the login screen and clear `authStore`; the layout's access-denied state is only for a mid-session revocation.
 - A deployed PocketBase must not sit behind Cloudflare Access on `/api/*`; browsers cannot complete a CORS preflight through it. Protect `/_/` instead.
 
 ### UI
@@ -120,6 +121,8 @@ pnpm test:e2e    # playwright, boots and stops its own dev server
 - Use Nuxt UI components (`UButton`, `UModal`, `UInput`, `UCard`, …) before hand-rolling Tailwind. Reach for raw markup only when no component fits.
 - Compress images with `browser-image-compression` before uploading. Never upload a raw camera file.
 - Every screen needs a loading state and an empty state. Both are reachable on a phone with a slow connection, which is the primary target.
+- Give every `UAlert` an explicit `color` (`error` / `warning` / `neutral` / `info`). The default is the primary colour, so an uncoloured error renders green.
+- Every form is a `UForm` with a plain `validate` returning `FormError[]`, one `UFormField name="…"` per field. No validation library, and no native `required` — its bubble fires before `validate` and the field message never shows. Never disable a submit button to stand in for validation; disable it only while the mutation is pending.
 - Screenshot any screen you build and look at it before calling it done. Check the narrow viewport for clipped text and content under the safe area.
 
 ### TypeScript
@@ -148,6 +151,8 @@ pnpm test:e2e    # playwright, boots and stops its own dev server
 - `describe.configure({ mode: 'serial' })` only orders one file. Spec files run in parallel, so a test must never mutate a seeded record — create the boxes and items it writes to.
 - Put e2e fixture teardown in `test.afterEach`, not a `finally`: Playwright hard-kills a timed-out test and the `finally` never runs, leaving the fixture dirty for every later run.
 - Call `pb.autoCancellation(false)` on a test's PocketBase client. The SDK cancels concurrent requests to the same endpoint, so a parallel fixture build silently keeps only the last write — and the cancelled ones still land server-side afterwards.
+- happy-dom does not synthesise a `submit` from a click on a `type="submit"` button. In a unit test, `trigger('submit')` on the form.
+- `/reports` pulls in nuxt-charts and its first compile on a cold dev server can outlast the 15s expect timeout — an assertion that lands there needs a longer one, or it looks like a broken route.
 - Playwright blocks service workers (`playwright.config.ts`); only `offline.spec.ts` allows them. The dev service worker bypasses `page.route` stubs and serves a stale list back to a test that just wrote.
 - Offline reads cannot be verified under `pnpm dev` — the dev service worker precaches only `/` and its navigation allowlist is `/^\/$/`. Verify by hand against a build: see `docs/testing-offline.md`.
 - Use realistic seed data — real box and item names, long titles, empty lists. Never "Test User" or lorem ipsum.
