@@ -77,6 +77,30 @@ Still offline, from step 4:
 v1 has no offline writes by design (PRD §3). The requirement is an honest refusal
 that loses nothing — not a queue.
 
+## First: clear any dev service worker
+
+`pnpm dev` and `pnpm preview:offline` both serve on `localhost:3000`, so they share
+an origin — and a service worker is registered per origin, not per server.
+
+The dev worker precaches exactly one thing: `/`. So if you have run `pnpm dev` in
+this browser, that worker is still registered and will serve its **cached dev
+shell** to the preview build. The dev shell asks for `/_nuxt/@vite/client` and
+`/_nuxt/@fs/...`, which a production build does not have, and every one fails with
+`NS_ERROR_CORRUPTED_CONTENT` (Firefox) or `ERR_FAILED` (Chrome).
+
+Nothing is wrong with the build when this happens — check with
+`curl -s localhost:3000/ | grep _nuxt`, which should show hashed bundle names like
+`/_nuxt/2bKEU2rf.js` and never `@fs` or `@vite/client`.
+
+Before starting, in DevTools:
+
+- **Chrome** — Application → Storage → *Clear site data*
+- **Firefox** — Storage → *Clear site data*, or about:debugging → This Firefox →
+  Service Workers → Unregister for `localhost:3000`
+
+Then hard reload (Ctrl+Shift+R). Do the same in reverse before going back to
+`pnpm dev`, for the same reason.
+
 ## Clearing state between attempts
 
 DevTools → Application → **Storage** → *Clear site data*. Re-priming from step 1

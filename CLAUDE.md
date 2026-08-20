@@ -155,6 +155,7 @@ pnpm test:e2e    # playwright, boots and stops its own dev server
 - happy-dom does not synthesise a `submit` from a click on a `type="submit"` button. In a unit test, `trigger('submit')` on the form.
 - `/reports` **and `/`** pull in nuxt-charts, and that first compile on a cold dev server can outlast the 15s expect timeout — an assertion landing on either needs a longer one, or it looks like a broken route. `auth.setup.ts` lands on `/` after signing in, so a flake there stops the whole suite.
 - Playwright blocks service workers (`playwright.config.ts`); only `offline.spec.ts` allows them. The dev service worker bypasses `page.route` stubs and serves a stale list back to a test that just wrote.
+- Clear the service worker before switching between `pnpm dev` and `pnpm preview:offline` — both serve on `localhost:3000` and a worker is registered per origin, so the dev worker's cached `/` shell gets served to the build and every `@vite`/`@fs` request fails.
 - Offline reads cannot be verified under `pnpm dev` — the dev service worker precaches only `/` and its navigation allowlist is `/^\/$/`. Verify by hand against a build: see `docs/testing-offline.md`.
 - Use realistic seed data — real box and item names, long titles, empty lists. Never "Test User" or lorem ipsum.
 
