@@ -152,9 +152,40 @@ Contents, top to bottom:
 Requirements:
 
 - Every chart has an explicit empty state. A fresh instance has zero of everything, and an empty chart reads as broken rather than empty.
-- The screen is **online-only**. Offline it shows a needs-connection state rather than stale or partial figures — unlike the rest of v1, partial aggregates would be actively misleading.
+- Offline, the figures are **served from cache and carry a staleness notice** (amended in v1.2; they were online-only in v1.1). The original reasoning stands and is why the notice is required rather than optional: a partial or out-of-date aggregate presented with authority is actively misleading. Reporting moved to a dashboard at `/` (§7.11), and blocking the app's front door offline would break §10's promise that the app opens with no connectivity — so the figures are shown with the warning instead of withheld. The notice appears only when the screen is actually showing cached figures: offline with nothing cached there is nothing stale to warn about, and a notice that is always on screen is one people stop reading.
 - Archived boxes are included but visually distinguished in the status split; they are excluded from the "items per box" ranking.
 - No export, no date-range picker, no drill-through in v1.1. Charts are not links.
+
+### 7.11 Dashboard (v1.2)
+
+`/` is the app's default screen and its offline front door. Read-only, available to any enabled member.
+
+Blocks, top to bottom:
+
+1. **Actions** — the cross-collection search bar, New box, Print sheet. Writes still refuse offline (§7.8).
+2. **Totals** — boxes, items, tags, photos. The same tiles as §7.10 item 1.
+3. **Items per box, top 5** — the most actionable of the five reporting blocks: which boxes are crowded.
+4. **Recent boxes** — the six most recently created active boxes.
+5. A link to `/reports` for the full picture.
+
+Requirements:
+
+- Every figure comes from the §6 view collections and the same helpers `/reports` uses. A figure that differs between the two screens is a bug.
+- The aggregate blocks (2 and 3) carry the §7.10 staleness notice offline. **Recent boxes do not** — a cached box list is the offline read v1 already promises and needs no apology.
+- Loading, empty and error states for both the figures and the box list.
+- Behind the auth guard like every other route; nothing about being the default page makes it public.
+
+### 7.12 Items (v1.2)
+
+`/items` lists every item across every box, for browsing rather than looking something up.
+
+- Free-text over item **title, description and notes** — the same three fields §7.6 covers for items.
+- **Tag filter chips**, AND-matched: an item must carry every selected tag.
+- Paginated, newest first. Each row shows the item and which box it is in.
+- **Items in archived boxes are excluded**, matching search (§7.2).
+- Term and selected tags live in the URL, so a filtered view is linkable and survives a reload.
+- Loading, empty ("no items yet"), no-matches ("nothing matches these filters") and error are four distinct states.
+- No box dropdown and no archived items in v1.2: term plus tags covers the need, and archived content here would contradict how the rest of the app treats archived boxes.
 
 ## 8. Non-Functional Requirements
 
@@ -167,7 +198,9 @@ Requirements:
 | Route | Purpose |
 |---|---|
 | `/login` | Auth |
-| `/` | Box index + search |
+| `/` | Dashboard: totals, one chart, recent boxes (v1.2, §7.11) |
+| `/boxes` | Box index + search |
+| `/items` | All items across boxes, with search and tag filter chips (v1.2, §7.12) |
 | `/box/new` | Create box |
 | `/box/:qr_id` | Box detail: items list, add item, edit/archive box |
 | `/box/:qr_id/print` | Printable single QR label |
@@ -190,7 +223,7 @@ Requirements:
 - A user can tag a box or item using an existing tag (via autocomplete) or by creating a new one inline.
 - Renaming a tag updates its label on every box/item that has it applied.
 - Filtering the box index or search results by a tag returns only matching boxes/items.
-- After viewing a box once while online, opening that same box with the device in airplane mode still shows its title, items, and images.
+- After viewing a box once while online, opening that same box with the device in airplane mode still shows its title, items, and images. Opening `/` in airplane mode likewise shows the cached box list and the cached figures with a staleness notice (§7.11) — never an error screen.
 - Archiving a box removes it from the default index and search but preserves all its data.
 
 ## 11. Open Questions / Decisions Deferred
