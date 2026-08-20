@@ -35,6 +35,9 @@ const permissionsErrorMessage = computed(() => (permissionsError.value ? pbError
 
 const editors = computed(() => (permissionsResult.value?.items ?? []).filter(p => p.role === 'editor'))
 
+// The directory backs `grantableOptions`; an empty list while it is still in
+// flight is "not loaded yet", not "everyone has access".
+const { isPending: directoryPending } = useAppUsers()
 const userMap = useAppUserMap()
 function nameFor(id: string): string {
   return userMap.value.get(id)?.name ?? 'Unknown member'
@@ -156,7 +159,7 @@ async function onRevoke(permission: StorageBoxPermission) {
           </UButton>
         </div>
 
-        <p v-if="!permissionsPending && grantableOptions.length === 0">
+        <p v-if="!permissionsPending && !directoryPending && grantableOptions.length === 0">
           Every member already has access.
         </p>
 
