@@ -10,12 +10,16 @@ const props = defineProps<{
 }>()
 
 const emit = defineEmits<{
-  submit: [payload: { title: string, description: string, notes: string, images: File[] }]
+  submit: [payload: { title: string, description: string, notes: string, tags: string[], images: File[] }]
 }>()
 
 const title = ref(props.existing?.title ?? '')
 const description = ref(props.existing?.description ?? '')
 const notes = ref(props.existing?.notes ?? '')
+// Copied, never the record's own array — see the note in BoxForm: an empty
+// init would make `itemUpdatePayload` see a real change to [] and wipe the
+// item's tags on a save that only touched the title.
+const tags = ref<string[]>([...(props.existing?.tags ?? [])])
 const images = ref<File[]>([])
 
 const tooManyImages = computed(() => images.value.length > MAX_IMAGES)
@@ -25,6 +29,7 @@ function onSubmit() {
     title: title.value,
     description: description.value,
     notes: notes.value,
+    tags: tags.value,
     images: images.value.slice(0, MAX_IMAGES)
   })
 }
@@ -51,7 +56,9 @@ function onSubmit() {
       <p v-if="tooManyImages">Only the first {{ MAX_IMAGES }} photos will be uploaded.</p>
     </UFormField>
 
-    <!-- Tag selection is wired in by wave 3, using slice B's TagPicker. -->
+    <UFormField label="Tags">
+      <TagPicker v-model="tags" />
+    </UFormField>
 
     <UAlert v-if="error" :description="error" data-testid="item-form-error" />
 

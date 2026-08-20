@@ -2,7 +2,7 @@
 const { mutateAsync: createBox, isPending } = useCreateBox()
 const errorMessage = ref('')
 
-async function onSubmit(payload: { title: string, description: string, location: string, images: File[] }) {
+async function onSubmit(payload: { title: string, description: string, location: string, tags: string[], images: File[] }) {
   errorMessage.value = ''
   try {
     const box = await createBox(payload)
