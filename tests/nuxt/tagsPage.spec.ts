@@ -28,7 +28,7 @@ mockNuxtImport('useTags', () => {
   })
 })
 
-mockNuxtImport('useTagUsage', () => {
+mockNuxtImport('useTagUsageMap', () => {
   return () => computed(() => new Map())
 })
 

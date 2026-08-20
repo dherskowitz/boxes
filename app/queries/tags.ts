@@ -82,18 +82,12 @@ export function indexTagUsage(
 }
 
 /**
- * Usage counts per tag, from the `storage_report_tag_usage` view — computed
- * in SQL, not by fetching every box and item and counting client-side. The
- * report has one row per tag, so unpaginated is correct here for the same
- * reason `useTags` is.
+ * Usage counts per tag, indexed by tag id — built on top of the reporting
+ * slice's `useTagUsage()` query rather than issuing a second request against
+ * `storage_report_tag_usage`.
  */
-export function useTagUsage() {
-  const { $pb } = useNuxtApp()
-  const { data } = useQuery({
-    queryKey: keys.reports.tagUsage(),
-    queryFn: () => $pb.collection('storage_report_tag_usage').getFullList<ReportTagUsage>(),
-    staleTime: 5 * 60 * 1000
-  })
+export function useTagUsageMap() {
+  const { data } = useTagUsage()
   return computed(() => indexTagUsage(data.value))
 }
 

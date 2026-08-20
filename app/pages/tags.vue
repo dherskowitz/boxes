@@ -2,7 +2,7 @@
 import type { StorageTag } from '~/types/pocketbase'
 
 const { data: tags, isPending, isError, error, refetch } = useTags()
-const tagUsage = useTagUsage()
+const tagUsage = useTagUsageMap()
 const { role } = useAuth()
 
 const renameTag = useRenameTag()
