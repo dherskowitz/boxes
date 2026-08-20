@@ -41,6 +41,15 @@ function cachedDirectoryEntries(page: Page): Promise<string[]> {
   }, DIRECTORY_PATH)
 }
 
+/** How many members the cached copy of the directory claims there are. */
+function cachedDirectoryCount(page: Page): Promise<number> {
+  return page.evaluate(async (url) => {
+    if (!(await caches.has('pb-api-storage'))) return -1
+    const hit = await (await caches.open('pb-api-storage')).match(url)
+    return hit ? (await hit.json()).items.length : -1
+  }, DIRECTORY_URLS[1])
+}
+
 /**
  * Read the membership directory from the page with no session.
  *
@@ -105,5 +114,33 @@ test.describe('signed in', () => {
 
     await expect.poll(() => cachedDirectoryEntries(page), { timeout: 15_000 })
       .toContain(DIRECTORY_URLS[1])
+  })
+
+  // A token that has expired mid-session still carries the header the guard
+  // above looks for, and PocketBase answers it with the same 200-and-empty as
+  // no token at all. Nothing clears the cache on expiry — there is no login to
+  // hang it off — so the directory must be read network-first while online.
+  test('a directory cached under a stale token is not served to a valid session', async ({ page }) => {
+    await page.goto('/')
+    await awaitServiceWorker(page)
+    await page.reload()
+    await expect(page.getByTestId('total-boxes')).toBeVisible({ timeout: 90_000 })
+
+    // The stale-token read is answered from cache, but its revalidation reaches
+    // the network and writes the empty set back — poll the cache itself, so the
+    // reload below is provably reading a poisoned entry.
+    await page.evaluate(
+      url => fetch(url, { headers: { Authorization: 'eyJhbGciOiJIUzI1NiJ9.expired.token' } }),
+      DIRECTORY_URLS[1]
+    )
+    await expect.poll(() => cachedDirectoryCount(page), { timeout: 15_000 }).toBe(0)
+
+    await page.reload()
+    // The dashboard first: the layout renders its pending skeleton before it
+    // settles on access-denied, so asserting the negatives alone would pass
+    // against the bug.
+    await expect(page.getByTestId('total-boxes')).toBeVisible({ timeout: 90_000 })
+    await expect(page.getByTestId('access-denied')).toBeHidden()
+    await expect(page.getByTestId('membership-error')).toBeHidden()
   })
 })

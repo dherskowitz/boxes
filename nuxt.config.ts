@@ -104,7 +104,37 @@ export default defineNuxtConfig({
       globPatterns: ['**/*.{js,css,html,svg,png,ico,woff2}'],
       runtimeCaching: [
         {
-          // Every storage_* collection (boxes, items, comments, tags,
+          // The membership directory, ahead of the general storage_* rule
+          // below and network-first rather than stale-while-revalidate.
+          //
+          // Staleness in boxes, items or tags costs you slightly old content.
+          // Staleness here locks you out of the whole app, because the layout
+          // gates every page on it — and the entry can go bad without anyone
+          // signing in or out: a token that expires mid-session still carries
+          // an Authorization header, and PocketBase answers it with the same
+          // 200-and-empty as no token at all, so neither the header guard nor
+          // clearApiCache() catches it. Network-first means a fresh answer
+          // always beats a poisoned one online, while still falling back to
+          // cache offline — where you could not re-authenticate anyway.
+          urlPattern: /^https?:\/\/[^/]+\/api\/collections\/storage_app_users\/records/,
+          handler: 'NetworkFirst',
+          method: 'GET',
+          options: {
+            // Same cache as the rule below on purpose: one name to clear.
+            cacheName: 'pb-api-storage',
+            // Fall back to cache rather than leaving the layout on a spinner.
+            networkTimeoutSeconds: 3,
+            cacheableResponse: { statuses: [0, 200] },
+            plugins: [
+              {
+                cacheWillUpdate: async ({ request, response }) =>
+                  request.headers.get('Authorization') ? response : null
+              }
+            ]
+          }
+        },
+        {
+          // Every other storage_* collection (boxes, items, comments, tags,
           // permissions, and — critically — the storage_app_users
           // membership directory the layout gates every page on). Matched
           // on URL shape, not a hardcoded host: the PocketBase origin
