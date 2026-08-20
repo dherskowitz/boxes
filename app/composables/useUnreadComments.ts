@@ -54,13 +54,22 @@ export function useUnreadComments(itemId: Ref<string>, comments: Ref<StorageComm
     }
   }
 
-  // Captured once at setup, not read fresh on every recompute: a caller
-  // typically calls markItemRead() once the thread has been seen, and that
-  // must not retroactively zero out the badge this visit was meant to show.
-  const lastViewed = readLastViewed()
+  // Not read fresh on every recompute: marking the thread read must not
+  // retroactively zero out the badge this visit was meant to show. Re-read on
+  // navigation instead — item -> item reuses the same route record, so setup
+  // never runs again and the badge would keep scoring against the old item.
+  const lastViewed = ref(readLastViewed())
+
+  // Marked read here rather than on mount: stamping "read now" while the
+  // thread is still loading or errored buries comments the user never saw.
+  // `comments` is undefined until the query resolves.
+  watch([itemId, comments], ([id, resolved], previous) => {
+    if (previous !== undefined && id !== previous[0]) lastViewed.value = readLastViewed()
+    if (resolved !== undefined) markItemRead(id)
+  }, { immediate: true })
 
   return computed(() =>
-    storageAvailable ? countUnread(comments.value, lastViewed, userId.value) : 0
+    storageAvailable ? countUnread(comments.value, lastViewed.value, userId.value) : 0
   )
 }
 

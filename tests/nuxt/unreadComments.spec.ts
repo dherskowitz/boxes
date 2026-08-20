@@ -79,6 +79,39 @@ describe('useUnreadComments', () => {
     expect(useUnreadComments(ref('i_peacoat'), ref(fromSam)).value).toBe(1)
   })
 
+  it('marks the item read once the thread has resolved', () => {
+    const store = stubWorkingStorage()
+
+    useUnreadComments(ref('i_peacoat'), ref(fromSam))
+
+    expect(store.get('storage-app:item-read:i_peacoat')).toBeDefined()
+  })
+
+  it('does not mark the item read while the thread is still loading', () => {
+    const store = stubWorkingStorage()
+
+    useUnreadComments(ref('i_peacoat'), ref<StorageComment[] | undefined>(undefined))
+
+    expect(store.has('storage-app:item-read:i_peacoat')).toBe(false)
+  })
+
+  it('follows the item when navigating item to item without a fresh setup', async () => {
+    // /item/a -> /item/b reuses the route record, so neither setup nor mount
+    // runs again: the marker has to be re-read and the new item marked read.
+    const store = stubWorkingStorage()
+    store.set('storage-app:item-read:i_peacoat', '2026-09-01T00:00:00.000Z')
+    const itemId = ref('i_peacoat')
+    const comments = ref<StorageComment[] | undefined>([])
+    const badge = useUnreadComments(itemId, comments)
+    expect(badge.value).toBe(0)
+
+    itemId.value = 'i_kettle'
+    comments.value = fromSam
+    await nextTick()
+
+    expect(badge.value).toBe(1)
+    expect(store.get('storage-app:item-read:i_kettle')).toBeDefined()
+  })
 })
 
 describe('markItemRead', () => {

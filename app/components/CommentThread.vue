@@ -5,14 +5,17 @@ const props = defineProps<{ itemId: string }>()
 
 const itemIdRef = computed(() => props.itemId)
 const { data, isPending, isError, error } = useComments(itemIdRef)
-const comments = computed(() => data.value?.items ?? [])
+// Undefined until the query resolves, so the badge can tell "still loading"
+// from "no comments" — see useUnreadComments, which must not mark an item read
+// before its thread has actually been shown.
+const resolvedComments = computed(() => data.value?.items)
+const comments = computed(() => resolvedComments.value ?? [])
 const errorMessage = computed(() => (error.value ? pbError(error.value) : ''))
 
 const userMap = useAppUserMap()
 const { userId } = useAuthUser()
 
-const unreadCount = useUnreadComments(itemIdRef, comments)
-onMounted(() => markItemRead(props.itemId))
+const unreadCount = useUnreadComments(itemIdRef, resolvedComments)
 
 function authorName(comment: StorageComment): string {
   // A comment whose author has since lost membership won't appear in the
