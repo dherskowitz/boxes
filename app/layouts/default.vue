@@ -22,7 +22,7 @@ const links = [
 ]
 
 async function onSignOut() {
-  logout()
+  await logout()
   await navigateTo('/login')
 }
 </script>

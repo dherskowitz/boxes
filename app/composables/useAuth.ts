@@ -17,6 +17,28 @@ export function deriveMembership(
   return directory.find(u => u.id === userId) ?? null
 }
 
+/** The service worker cache holding every `storage_*` list response. */
+const API_CACHE = 'pb-api-storage'
+
+/**
+ * Drop the service worker's cache of PocketBase responses.
+ *
+ * That cache is keyed by URL alone, with no auth dimension, so on a shared
+ * device one user's boxes, items and member directory are served to the next —
+ * until revalidation catches up, and indefinitely while offline. Clearing it on
+ * both auth transitions is what stops that: on sign-out so nothing of this
+ * user's is left behind, and on sign-in so anything cached without a session is
+ * discarded before the membership gate reads it.
+ *
+ * No-ops where the Cache API is unavailable — a non-secure context, an older
+ * browser, or the unit test environment — because neither transition may fail
+ * over a cache that was never there.
+ */
+export async function clearApiCache(): Promise<void> {
+  if (typeof caches === 'undefined') return
+  await caches.delete(API_CACHE)
+}
+
 /**
  * Identity only: who is signed in, plus sign in/out.
  *
@@ -31,6 +53,11 @@ export function useAuthUser() {
   const isLoggedIn = computed(() => userId.value !== '')
 
   async function login(email: string, password: string) {
+    // Before anything reads the directory, not after: the service worker sits
+    // below the SDK, so the deliberate read-past-nuxt-query below is served
+    // from `pb-api-storage` too — and an entry cached without a session would
+    // reject this account as a non-member.
+    await clearApiCache()
     const { record } = await $pb.collection('users').authWithPassword(email, password)
     try {
       // Read straight from PocketBase, NOT through nuxt-query like every other
@@ -47,8 +74,9 @@ export function useAuthUser() {
     }
   }
 
-  function logout() {
+  async function logout() {
     $pb.authStore.clear()
+    await clearApiCache()
   }
 
   return { user: $pbUser, userId, isLoggedIn, login, logout }

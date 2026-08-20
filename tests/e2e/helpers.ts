@@ -6,7 +6,7 @@ import PocketBase, { ClientResponseError } from 'pocketbase'
 // The playwright test process does not load this worktree's .env the way the
 // `nuxt dev` child process (started by webServer) does, so read it directly
 // rather than hardcoding a URL (CLAUDE.md: never hardcode a PocketBase URL).
-function pocketbaseUrl(): string {
+export function pocketbaseUrl(): string {
   if (process.env.NUXT_PUBLIC_POCKETBASE_URL) return process.env.NUXT_PUBLIC_POCKETBASE_URL
   const match = readFileSync('.env', 'utf-8').match(/^NUXT_PUBLIC_POCKETBASE_URL=(.+)$/m)
   if (!match) throw new Error('NUXT_PUBLIC_POCKETBASE_URL not found in .env')
