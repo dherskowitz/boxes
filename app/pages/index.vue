@@ -107,7 +107,7 @@ function onSearchSubmit() {
 
       <template v-else>
         <ReportTotals :totals="totals" />
-        <ReportItemsPerBox :box-fill="topBoxes" />
+        <LazyReportItemsPerBox :box-fill="topBoxes" />
       </template>
 
       <NuxtLink to="/reports" data-testid="dashboard-reports-link">Full reports</NuxtLink>

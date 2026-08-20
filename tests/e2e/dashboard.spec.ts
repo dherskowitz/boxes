@@ -68,6 +68,13 @@ test('links to the full reports screen', async ({ page }) => {
 test('offline, warns the figures are stale but still lists boxes', async ({ page, context }) => {
   await page.goto('/')
   await expect(page.getByTestId('total-boxes')).toBeVisible({ timeout: CHART_TIMEOUT })
+  // Wait for the chart while still online. It is a <LazyReportItemsPerBox>, so
+  // its chunk arrives on its own dynamic import after the tiles paint, and this
+  // spec runs with service workers blocked — flipping offline mid-import would
+  // fail on a race rather than on the offline behaviour being tested. In the
+  // built PWA the chunk is precached by globPatterns; here the online wait is
+  // what stands in for that.
+  await expect(page.getByTestId('items-per-box-chart')).toBeVisible({ timeout: CHART_TIMEOUT })
   const expected = await recentActiveBoxes()
   const first = expected[0]
   expect(first).toBeDefined()
