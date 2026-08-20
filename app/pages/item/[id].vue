@@ -38,6 +38,7 @@ async function onUpdate(payload: { title: string, description: string, notes: st
 }
 
 // Delete
+const deleteOpen = ref(false)
 const { mutateAsync: deleteItem, isPending: deletePending } = useDeleteItem()
 const deleteError = ref('')
 async function onDelete() {
@@ -47,9 +48,11 @@ async function onDelete() {
   deleteError.value = ''
   try {
     await deleteItem(current.id)
+    deleteOpen.value = false
     await navigateTo(qrId ? `/box/${qrId}` : '/')
   } catch (e) {
     deleteError.value = pbError(e)
+    deleteOpen.value = false
   }
 }
 </script>
@@ -73,7 +76,12 @@ async function onDelete() {
         <h1 class="text-lg font-medium">{{ item.title }}</h1>
         <div class="flex flex-wrap gap-2">
           <UButton v-if="canEdit" data-testid="edit-item" @click="editOpen = true">Edit</UButton>
-          <UButton v-if="canEdit" data-testid="delete-item" :loading="deletePending" @click="onDelete">
+          <UButton
+            v-if="canEdit"
+            data-testid="delete-item"
+            :loading="deletePending"
+            @click="deleteOpen = true"
+          >
             Delete
           </UButton>
         </div>
@@ -86,16 +94,33 @@ async function onDelete() {
 
       <div v-if="galleryUrls.length > 0" class="flex flex-wrap gap-2">
         <img
-          v-for="url in galleryUrls"
+          v-for="(url, index) in galleryUrls"
           :key="url"
           data-testid="item-gallery-image"
           :src="url"
+          :alt="`${item.title}, photo ${index + 1}`"
           class="h-24 w-24 object-cover"
         >
       </div>
       <div v-else data-testid="item-gallery-empty">
         <p>No photos yet.</p>
       </div>
+
+      <UModal v-model:open="deleteOpen" title="Delete item">
+        <template #body>
+          <div data-testid="delete-item-confirm" class="flex flex-col gap-4">
+            <p>Delete "{{ item.title }}"? This cannot be undone.</p>
+            <div class="flex gap-2">
+              <UButton data-testid="cancel-delete-item" variant="ghost" @click="deleteOpen = false">
+                Cancel
+              </UButton>
+              <UButton data-testid="confirm-delete-item" :loading="deletePending" @click="onDelete">
+                Delete item
+              </UButton>
+            </div>
+          </div>
+        </template>
+      </UModal>
 
       <UModal v-model:open="editOpen" title="Edit item">
         <template #body>
