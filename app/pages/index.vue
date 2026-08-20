@@ -4,6 +4,10 @@
 // 10 active and 2 archived boxes sees all 12.
 const showArchived = ref(false)
 
+// PRD §7.7: narrow the index by one or more tags. Multiple tags AND-match —
+// a box must carry all of them (`tagClauses()`).
+const tagIds = ref<string[]>([])
+
 const searchTerm = ref('')
 function onSearchSubmit() {
   const term = searchTerm.value.trim()
@@ -24,15 +28,18 @@ function onSearchSubmit() {
 
     <SearchBar v-model="searchTerm" @submit="onSearchSubmit" />
 
+    <TagFilter v-model="tagIds" />
+
     <UCheckbox v-model="showArchived" data-testid="show-archived" label="Show archived boxes" />
 
-    <BoxSection status="active" heading="Active" empty-message="No boxes yet." />
+    <BoxSection status="active" heading="Active" empty-message="No boxes yet." :tag-ids="tagIds" />
 
     <BoxSection
       v-if="showArchived"
       status="archived"
       heading="Archived"
       empty-message="No archived boxes."
+      :tag-ids="tagIds"
     />
   </div>
 </template>
