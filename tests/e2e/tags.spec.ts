@@ -28,6 +28,27 @@ test.describe('as an owner', () => {
     await expect(page.getByText('paperwork')).toBeVisible()
   })
 
+  // The shared fixture ('kitchen') is renamed to 'kitchenware' partway
+  // through the test below and renamed back at the end. If any assertion in
+  // between throws, the test aborts before the restore runs and the fixture
+  // is left renamed for every later run, every other slice, and CI. This
+  // hook unconditionally renames it back — via the same API the mutation
+  // uses, not the UI, so it does not depend on the page under test still
+  // being usable — whenever the tag is currently 'kitchenware', regardless
+  // of whether the test passed.
+  test.afterEach(async () => {
+    const pb = await authedClient('dana@local.test')
+    let stray
+    try {
+      stray = await pb.collection('storage_tags').getFirstListItem(
+        pb.filter('name = {:name}', { name: 'kitchenware' })
+      )
+    } catch {
+      return // no stray 'kitchenware' tag - fixture is clean
+    }
+    await pb.collection('storage_tags').update(stray.id, { name: 'kitchen' })
+  })
+
   test('can rename a tag, and the relation carries the new name (not a copy)', async ({ page }) => {
     await page.goto('/tags')
     await page.getByTestId('rename-tag-kitchen').click()
@@ -49,7 +70,9 @@ test.describe('as an owner', () => {
     const tagNames = (box.expand?.tags ?? []).map(t => t.name)
     expect(tagNames).toContain('kitchenware')
 
-    // restore, so the shared fixture is unchanged for other tests
+    // restore, so the shared fixture is unchanged for other tests. The
+    // afterEach hook above is the safety net if this itself does not run;
+    // this is still the fast path when nothing fails.
     await page.goto('/tags')
     await page.getByTestId('rename-tag-kitchenware').click()
     await page.getByLabel('Name').fill('kitchen')
