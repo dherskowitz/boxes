@@ -85,6 +85,7 @@ pnpm test:e2e    # playwright, boots and stops its own dev server
 - Run the loop after every meaningful edit, not once at the end.
 - Never report success on a red loop. Never skip or `.only` a test to get to green.
 - If a test is wrong, say so and explain why before changing it.
+- Run `pnpm nuxt prepare` before `pnpm typecheck` after any merge or branch switch. A stale `.nuxt/imports.d.ts` reports every auto-imported symbol as "Cannot find name" — phantom errors that vanish on regeneration.
 - Don't leave `pnpm dev` running to "verify" — `test:e2e` manages its own server, and a stale one on `:3000` gets reused and produces confusing results.
 
 ## Rules
