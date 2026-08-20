@@ -137,6 +137,7 @@ pnpm test:e2e    # playwright, boots and stops its own dev server
 - `describe.configure({ mode: 'serial' })` only orders one file. Spec files run in parallel, so a test must never mutate a seeded record — create the boxes and items it writes to.
 - Put e2e fixture teardown in `test.afterEach`, not a `finally`: Playwright hard-kills a timed-out test and the `finally` never runs, leaving the fixture dirty for every later run.
 - Call `pb.autoCancellation(false)` on a test's PocketBase client. The SDK cancels concurrent requests to the same endpoint, so a parallel fixture build silently keeps only the last write — and the cancelled ones still land server-side afterwards.
+- Playwright blocks service workers (`playwright.config.ts`); only `offline.spec.ts` allows them. The dev service worker bypasses `page.route` stubs and serves a stale list back to a test that just wrote.
 - Use realistic seed data — real box and item names, long titles, empty lists. Never "Test User" or lorem ipsum.
 
 ## Ask before you assume

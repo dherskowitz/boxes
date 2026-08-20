@@ -14,6 +14,10 @@ export default defineConfig({
   expect: { timeout: 15_000 },
   use: {
     baseURL: BASE,
+    // `page.route` does not intercept service-worker-initiated requests, and a
+    // StaleWhileRevalidate cache serves a test its own pre-write list back.
+    // Blocked by default; offline.spec.ts opts back in — it tests the worker.
+    serviceWorkers: 'block',
     // mobile-first app — test the primary target
     ...devices['Pixel 7']
   },

@@ -1,6 +1,7 @@
 import { expect, test } from '@playwright/test'
 
-test.use({ storageState: 'tests/e2e/.auth/dana.json' })
+// These tests exist to prove the service worker caches — it must run here.
+test.use({ storageState: 'tests/e2e/.auth/dana.json', serviceWorkers: 'allow' })
 
 test('a previously-viewed box still opens with no network', async ({ page, context }) => {
   // Prime the cache while online.
