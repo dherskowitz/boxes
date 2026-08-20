@@ -10,6 +10,11 @@ const ACCOUNTS = [
 
 for (const { role, email } of ACCOUNTS) {
   setup(`authenticate as ${role}`, async ({ page }) => {
+    // The 45s expect below has to fit inside the test timeout alongside
+    // /login's own cold compile, which the config's 60s does not comfortably
+    // allow. reports.spec.ts and dashboard.spec.ts already raise theirs; this
+    // is the file whose failure costs all 112 tests, so it gets the most room.
+    setup.setTimeout(150_000)
     await page.goto('/login')
     await page.getByLabel('Email').fill(email)
     await page.getByLabel('Password').fill('storagedev123')
