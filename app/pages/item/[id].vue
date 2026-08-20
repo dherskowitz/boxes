@@ -128,7 +128,7 @@ async function onDelete() {
         </template>
       </UModal>
 
-      <!-- Comment thread is wired in by wave 2's slice E, below the item body. -->
+      <CommentThread :item-id="item.id" />
     </div>
   </div>
 </template>
