@@ -10,8 +10,12 @@ const {
 
 const membershipErrorMessage = computed(() => pbError(membershipError.value))
 
+// `/items` is built by a concurrent slice; the link resolves to nothing until
+// that lands. Adding it here rather than there keeps this file single-owner.
 const links = [
-  { label: 'Boxes', to: '/' },
+  { label: 'Dashboard', to: '/' },
+  { label: 'Boxes', to: '/boxes' },
+  { label: 'Items', to: '/items' },
   { label: 'Search', to: '/search' },
   { label: 'Tags', to: '/tags' },
   { label: 'Reports', to: '/reports' }
@@ -25,9 +29,11 @@ async function onSignOut() {
 
 <template>
   <div class="flex min-h-screen flex-col">
-    <header class="flex items-center gap-4 border-b p-4">
+    <!-- flex-wrap on both: six links plus the logo and sign-out do not fit on
+         one 412px row, and the primary target is a phone. -->
+    <header class="flex flex-wrap items-center gap-4 border-b p-4">
       <NuxtLink to="/" class="font-medium">Storage Boxes</NuxtLink>
-      <nav class="flex flex-1 gap-3">
+      <nav class="flex flex-1 flex-wrap gap-3">
         <NuxtLink v-for="link in links" :key="link.to" :to="link.to">{{ link.label }}</NuxtLink>
       </nav>
       <UButton variant="ghost" data-testid="sign-out" @click="onSignOut">Sign out</UButton>

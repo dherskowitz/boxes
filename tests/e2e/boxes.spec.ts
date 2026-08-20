@@ -6,7 +6,7 @@ test.use({ storageState: 'tests/e2e/.auth/dana.json' })
 const throwaway = throwawayBoxes()
 
 test('lists active boxes and hides archived ones by default', async ({ page }) => {
-  await page.goto('/')
+  await page.goto('/boxes')
   await expect(page.getByText('Winter coats and boots')).toBeVisible()
   await expect(page.getByText('Empty spare box')).toBeVisible()
   // seedbox5 is archived
@@ -14,7 +14,7 @@ test('lists active boxes and hides archived ones by default', async ({ page }) =
 })
 
 test('adds archived boxes as a second section rather than swapping the list', async ({ page }) => {
-  await page.goto('/')
+  await page.goto('/boxes')
   await page.getByTestId('show-archived').click()
   await expect(page.getByTestId('box-section-archived').getByText('College photo albums')).toBeVisible()
   // PRD §7.2: archived boxes are *included*, not substituted — the active
@@ -23,7 +23,7 @@ test('adds archived boxes as a second section rather than swapping the list', as
 })
 
 test('opens a box from its card', async ({ page }) => {
-  await page.goto('/')
+  await page.goto('/boxes')
   await page.getByText('Winter coats and boots').click()
   await expect(page).toHaveURL('/box/seedbox1')
 })
@@ -36,7 +36,7 @@ test('shows the empty state when there are no active boxes', async ({ page }) =>
   await page.route('**/api/collections/storage_boxes/records?*', route =>
     route.fulfill({ json: { page: 1, perPage: 30, totalItems: 0, totalPages: 0, items: [] } })
   )
-  await page.goto('/')
+  await page.goto('/boxes')
   await expect(page.getByTestId('box-list-empty-active')).toBeVisible()
 })
 
