@@ -58,7 +58,10 @@ export function useItemList(filters: Ref<ItemListFilters>) {
         expand: 'tags,box',
         sort: '-created'
       })
-    }
+    },
+    // '' is not the same as absent. Box detail passes '' while its box is still
+    // loading and must not fire the browse-all query; absent means /items.
+    enabled: computed(() => filters.value.boxId !== '')
   })
 }
 
