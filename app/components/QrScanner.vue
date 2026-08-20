@@ -34,18 +34,21 @@ function onError(error: EmittedError) {
   <div data-testid="qr-scanner">
     <UAlert
       v-if="state === 'permission-denied'"
+      color="warning"
       data-testid="scanner-permission-denied"
       title="Camera access denied"
       description="Allow camera access for this site in your browser settings, then try again."
     />
     <UAlert
       v-else-if="state === 'no-camera'"
+      color="warning"
       data-testid="scanner-no-camera"
       title="No camera available"
       description="This device has no camera the app can use. Enter the box's code shown under its label instead."
     />
     <UAlert
       v-else-if="state === 'error'"
+      color="error"
       data-testid="scanner-error"
       title="Could not start the camera"
       :description="errorMessage"
@@ -54,6 +57,7 @@ function onError(error: EmittedError) {
       <QrcodeStream @detect="onDetect" @error="onError" />
       <UAlert
         v-if="state === 'invalid'"
+        color="warning"
         data-testid="scanner-invalid"
         title="That is not a storage box code"
         description="Keep scanning, or try another code."

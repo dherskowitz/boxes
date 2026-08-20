@@ -60,7 +60,7 @@ function onSubmit() {
       <TagPicker v-model="tags" />
     </UFormField>
 
-    <UAlert v-if="error" :description="error" data-testid="item-form-error" />
+    <UAlert v-if="error" color="error" :description="error" data-testid="item-form-error" />
 
     <UButton type="submit" :loading="pending" :disabled="pending" block>
       {{ existing ? 'Save changes' : 'Add item' }}

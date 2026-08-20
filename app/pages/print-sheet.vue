@@ -38,6 +38,7 @@ function printSheet() {
 
     <UAlert
       v-else-if="isError"
+      color="error"
       data-testid="print-sheet-error"
       title="Could not load boxes"
       :description="pbError(error)"
@@ -45,6 +46,7 @@ function printSheet() {
 
     <UAlert
       v-else-if="boxes.length === 0"
+      color="neutral"
       data-testid="print-sheet-empty"
       title="No boxes yet"
       description="Create a box first, then come back to print its label."
@@ -73,6 +75,7 @@ function printSheet() {
 
       <UAlert
         v-if="selectedBoxes.length === 0"
+        color="neutral"
         data-testid="print-sheet-nothing-selected"
         title="Nothing selected"
         description="Tick at least one box above to build a print sheet."

@@ -163,7 +163,7 @@ async function onMove() {
       <UButton to="/">Back to boxes</UButton>
     </div>
 
-    <UAlert v-else-if="boxIsError" :description="boxErrorMessage" />
+    <UAlert v-else-if="boxIsError" color="error" :description="boxErrorMessage" />
 
     <div v-else-if="box" class="flex flex-col gap-6">
       <div class="flex flex-wrap items-start justify-between gap-3">
@@ -198,8 +198,8 @@ async function onMove() {
 
       <p v-if="canDelete && hasItems">Empty this box before deleting it.</p>
 
-      <UAlert v-if="archiveError" :description="archiveError" />
-      <UAlert v-if="deleteError" :description="deleteError" />
+      <UAlert v-if="archiveError" color="error" :description="archiveError" />
+      <UAlert v-if="deleteError" color="error" :description="deleteError" />
 
       <p v-if="box.description">{{ box.description }}</p>
 
@@ -240,7 +240,7 @@ async function onMove() {
         <USkeleton v-for="n in 3" :key="n" class="h-16 w-full" />
       </div>
 
-      <UAlert v-else-if="itemsIsError" :description="itemsErrorMessage" />
+      <UAlert v-else-if="itemsIsError" color="error" :description="itemsErrorMessage" />
 
       <div v-else-if="items.length === 0" data-testid="item-list-empty">
         <p>No items in this box yet.</p>
@@ -301,7 +301,7 @@ async function onMove() {
               :items="moveTargets"
               placeholder="Choose a box"
             />
-            <UAlert v-if="moveError" :description="moveError" />
+            <UAlert v-if="moveError" color="error" :description="moveError" />
             <UButton
               data-testid="confirm-move"
               :loading="movePending"

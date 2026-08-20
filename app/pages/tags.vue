@@ -77,7 +77,7 @@ async function performDelete() {
     </div>
 
     <div v-else-if="isError" class="flex flex-col items-start gap-3">
-      <UAlert title="Could not load tags" :description="pbError(error)" />
+      <UAlert color="error" title="Could not load tags" :description="pbError(error)" />
       <UButton data-testid="tags-retry" @click="refetch()">Try again</UButton>
     </div>
 
@@ -126,7 +126,7 @@ async function performDelete() {
       </li>
     </ul>
 
-    <UAlert v-if="renameError" :description="renameError" />
+    <UAlert v-if="renameError" color="error" :description="renameError" />
 
     <UModal
       v-model:open="deleteOpen"
@@ -138,7 +138,7 @@ async function performDelete() {
       "
     >
       <template #footer>
-        <UAlert v-if="deleteError" :description="deleteError" />
+        <UAlert v-if="deleteError" color="error" :description="deleteError" />
         <div class="flex justify-end gap-2">
           <UButton variant="ghost" @click="deleteTarget = null">Cancel</UButton>
           <UButton :loading="deleteTag.isPending.value" @click="performDelete">

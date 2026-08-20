@@ -47,7 +47,7 @@ const errorMessage = computed(() => (error.value ? pbError(error.value) : ''))
       <USkeleton v-for="n in 6" :key="n" class="h-40 w-full" />
     </div>
 
-    <UAlert v-else-if="isError" :description="errorMessage" />
+    <UAlert v-else-if="isError" color="error" :description="errorMessage" />
 
     <!-- A filter that matches nothing is not the same as owning no boxes:
          "create your first box" is wrong advice when the list is merely too

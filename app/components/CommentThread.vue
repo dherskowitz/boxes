@@ -101,7 +101,7 @@ async function confirmDelete() {
       <USkeleton class="h-12 w-full" />
     </div>
 
-    <UAlert v-else-if="isError" data-testid="comment-thread-error" :description="errorMessage" />
+    <UAlert v-else-if="isError" color="error" data-testid="comment-thread-error" :description="errorMessage" />
 
     <template v-else>
       <div v-if="comments.length === 0" data-testid="comment-thread-empty">
@@ -123,7 +123,7 @@ async function confirmDelete() {
       </ul>
     </template>
 
-    <UAlert v-if="createError" data-testid="comment-form-error" :description="createError" />
+    <UAlert v-if="createError" color="error" data-testid="comment-form-error" :description="createError" />
     <form class="flex flex-col gap-2" @submit.prevent="onSubmit">
       <UTextarea
         v-model="newText"
@@ -145,7 +145,7 @@ async function confirmDelete() {
       <template #body>
         <div data-testid="comment-edit-form" class="flex flex-col gap-4">
           <UTextarea v-model="editText" data-testid="comment-edit-input" class="w-full" />
-          <UAlert v-if="editError" :description="editError" />
+          <UAlert v-if="editError" color="error" :description="editError" />
           <div class="flex gap-2">
             <UButton data-testid="comment-cancel-edit" variant="ghost" @click="editOpen = false">
               Cancel
@@ -167,7 +167,7 @@ async function confirmDelete() {
       <template #body>
         <div data-testid="comment-delete-confirm" class="flex flex-col gap-4">
           <p>Delete this comment? This cannot be undone.</p>
-          <UAlert v-if="deleteError" :description="deleteError" />
+          <UAlert v-if="deleteError" color="error" :description="deleteError" />
           <div class="flex gap-2">
             <UButton data-testid="comment-cancel-delete" variant="ghost" @click="deleteOpen = false">
               Cancel

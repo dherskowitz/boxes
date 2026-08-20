@@ -91,7 +91,7 @@ async function onRevoke(permission: StorageBoxPermission) {
       <UButton to="/">Back to boxes</UButton>
     </div>
 
-    <UAlert v-else-if="boxIsError" :description="boxErrorMessage" />
+    <UAlert v-else-if="boxIsError" color="error" :description="boxErrorMessage" />
 
     <div v-else-if="box" class="flex flex-col gap-4">
       <div class="flex flex-wrap items-center justify-between gap-3">
@@ -109,7 +109,7 @@ async function onRevoke(permission: StorageBoxPermission) {
         </div>
 
         <div v-else-if="permissionsIsError" class="flex flex-col items-start gap-3">
-          <UAlert title="Could not load editors" :description="permissionsErrorMessage" />
+          <UAlert color="error" title="Could not load editors" :description="permissionsErrorMessage" />
           <UButton data-testid="share-editors-retry" @click="refetchPermissions()">Try again</UButton>
         </div>
 
@@ -137,7 +137,7 @@ async function onRevoke(permission: StorageBoxPermission) {
             </li>
           </ul>
 
-          <UAlert v-if="revokeError" :description="revokeError" />
+          <UAlert v-if="revokeError" color="error" :description="revokeError" />
         </template>
 
         <div class="flex flex-wrap items-end gap-2">
@@ -163,7 +163,7 @@ async function onRevoke(permission: StorageBoxPermission) {
           Every member already has access.
         </p>
 
-        <UAlert v-if="grantError" :description="grantError" />
+        <UAlert v-if="grantError" color="error" :description="grantError" />
       </div>
     </div>
   </div>

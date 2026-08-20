@@ -49,7 +49,7 @@ async function onSubmit() {
           />
         </UFormField>
 
-        <UAlert v-if="error" :description="error" data-testid="login-error" />
+        <UAlert v-if="error" color="error" :description="error" data-testid="login-error" />
 
         <UButton type="submit" :loading="pending" block>Sign in</UButton>
       </form>
