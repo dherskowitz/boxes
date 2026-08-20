@@ -1,6 +1,6 @@
 import type { StorageBox, StorageItem } from '~/types/pocketbase'
 import type { PbFilter, SearchFilters } from '~/queries/keys'
-import { keys, PER_PAGE } from '~/queries/keys'
+import { keys, PER_PAGE, tagClauses } from '~/queries/keys'
 
 /** Discriminated so a template can never render an item as a box, or vice versa. */
 export type SearchResult = { kind: 'box', box: StorageBox } | { kind: 'item', item: StorageItem }
@@ -22,21 +22,28 @@ export type SearchResult = { kind: 'box', box: StorageBox } | { kind: 'item', it
  *
  * A blank term returns a filter that matches nothing, never one that matches
  * everything — landing on an empty search must not return the whole database.
+ *
+ * `tagIds` AND-matches, via the same `tagClauses()` both list filters use:
+ * boxes and items each carry tags, so both kinds narrow by them.
  */
-export function searchFilter(term: string, opts: { kind: 'box' | 'item' }): PbFilter {
+export function searchFilter(
+  term: string,
+  opts: { kind: 'box' | 'item', tagIds?: string[] }
+): PbFilter {
   const trimmed = term.trim()
   if (!trimmed) return { raw: '1 = 2', params: {} }
 
-  const params: Record<string, unknown> = { search: trimmed, status: 'active' }
-  if (opts.kind === 'box') {
-    return { raw: 'status = {:status} && title ~ {:search}', params }
-  }
-  // Items carry no status of their own — exclusion of an archived box's items
-  // travels through the relation field, which PocketBase resolves via a join.
-  return {
-    raw: 'box.status = {:status} && (title ~ {:search} || description ~ {:search} || notes ~ {:search})',
-    params
-  }
+  const tags = tagClauses(opts.tagIds)
+  const params: Record<string, unknown> = { search: trimmed, status: 'active', ...tags.params }
+  const clauses
+    = opts.kind === 'box'
+      ? ['status = {:status}', 'title ~ {:search}']
+      // Items carry no status of their own — exclusion of an archived box's
+      // items travels through the relation field, which PocketBase resolves
+      // via a join.
+      : ['box.status = {:status}', '(title ~ {:search} || description ~ {:search} || notes ~ {:search})']
+
+  return { raw: [...clauses, ...tags.clauses].join(' && '), params }
 }
 
 /**
@@ -51,7 +58,10 @@ export function useSearch(filters: Ref<SearchFilters>) {
   const boxes = useQuery({
     queryKey: computed(() => [...keys.search.query(filters.value), 'boxes'] as const),
     queryFn: () => {
-      const { raw, params } = searchFilter(filters.value.term, { kind: 'box' })
+      const { raw, params } = searchFilter(filters.value.term, {
+        kind: 'box',
+        tagIds: filters.value.tagIds
+      })
       return $pb.collection('storage_boxes').getList<StorageBox>(1, PER_PAGE, {
         filter: $pb.filter(raw, params),
         sort: '-created'
@@ -63,7 +73,10 @@ export function useSearch(filters: Ref<SearchFilters>) {
   const items = useQuery({
     queryKey: computed(() => [...keys.search.query(filters.value), 'items'] as const),
     queryFn: () => {
-      const { raw, params } = searchFilter(filters.value.term, { kind: 'item' })
+      const { raw, params } = searchFilter(filters.value.term, {
+        kind: 'item',
+        tagIds: filters.value.tagIds
+      })
       return $pb.collection('storage_items').getList<StorageItem>(1, PER_PAGE, {
         filter: $pb.filter(raw, params),
         expand: 'box',

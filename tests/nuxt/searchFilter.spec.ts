@@ -46,4 +46,36 @@ describe('searchFilter', () => {
     const executable = pb.filter(raw, params)
     expect(executable).not.toContain('id != ""')
   })
+
+  it('AND-matches every selected tag, for boxes', () => {
+    const { raw, params } = searchFilter('coats', { kind: 'box', tagIds: ['t_winter', 't_fragile'] })
+    expect(raw).toContain('tags ~ {:tag0}')
+    expect(raw).toContain('tags ~ {:tag1}')
+    expect(params.tag0).toBe('t_winter')
+    expect(params.tag1).toBe('t_fragile')
+  })
+
+  it('AND-matches every selected tag, for items', () => {
+    const { raw, params } = searchFilter('peacoat', { kind: 'item', tagIds: ['t_winter', 't_fragile'] })
+    expect(raw).toContain('tags ~ {:tag0}')
+    expect(raw).toContain('tags ~ {:tag1}')
+    expect(params.tag0).toBe('t_winter')
+    expect(params.tag1).toBe('t_fragile')
+  })
+
+  it('never lets a tag id reach raw either', () => {
+    const { raw, params } = searchFilter('coats', { kind: 'box', tagIds: ['t" || id != "'] })
+    expect(raw).not.toContain('t"')
+    const pb = new PocketBase('http://localhost')
+    expect(pb.filter(raw, params)).not.toContain('id != ""')
+  })
+
+  it('is unchanged when no tags are selected', () => {
+    const withNone = searchFilter('coats', { kind: 'box' })
+    const withEmpty = searchFilter('coats', { kind: 'box', tagIds: [] })
+    expect(withEmpty).toEqual(withNone)
+    expect(searchFilter('peacoat', { kind: 'item', tagIds: [] })).toEqual(
+      searchFilter('peacoat', { kind: 'item' })
+    )
+  })
 })
