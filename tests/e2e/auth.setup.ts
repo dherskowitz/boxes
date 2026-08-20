@@ -3,8 +3,9 @@ import { expect, test as setup } from '@playwright/test'
 const ACCOUNTS = [
   { role: 'dana', email: 'dana@local.test' },
   { role: 'sam', email: 'sam@local.test' },
-  { role: 'rae', email: 'rae@local.test' },
-  { role: 'nobody', email: 'nobody@local.test' }
+  { role: 'rae', email: 'rae@local.test' }
+  // No `nobody` session: login() rejects an account without an enabled
+  // app_memberships row, so that account can no longer hold one.
 ] as const
 
 for (const { role, email } of ACCOUNTS) {
