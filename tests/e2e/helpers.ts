@@ -53,7 +53,7 @@ export interface TestItem { id: string, title: string }
 
 export async function createBox(
   pb: PocketBase,
-  fields: { title: string, location?: string, status?: 'active' | 'archived' }
+  fields: { title: string, location?: string, status?: 'active' | 'archived', tags?: string[] }
 ): Promise<TestBox> {
   return pb.collection('storage_boxes').create<TestBox>({
     qr_id: throwawayQrId(),
@@ -61,21 +61,31 @@ export async function createBox(
     description: '',
     location: fields.location ?? '',
     status: fields.status ?? 'active',
+    tags: fields.tags ?? [],
     created_by: authedUserId(pb)
   })
 }
 
 export async function createItem(
   pb: PocketBase,
-  fields: { boxId: string, title: string, description?: string, notes?: string }
+  fields: { boxId: string, title: string, description?: string, notes?: string, tags?: string[] }
 ): Promise<TestItem> {
   return pb.collection('storage_items').create<TestItem>({
     box: fields.boxId,
     title: fields.title,
     description: fields.description ?? '',
     notes: fields.notes ?? '',
+    tags: fields.tags ?? [],
     created_by: authedUserId(pb)
   })
+}
+
+/** Look up a seeded tag by name; the seed's five tags are read-only fixture. */
+export async function tagIdByName(pb: PocketBase, name: string): Promise<string> {
+  const tag = await pb.collection('storage_tags').getFirstListItem(
+    pb.filter('name = {:name}', { name })
+  )
+  return tag.id
 }
 
 /**
@@ -122,4 +132,68 @@ export function throwawayBoxes(): string[] {
     }
   })
   return ids
+}
+
+/**
+ * Registers an `afterEach` that removes every box whose *title* was pushed
+ * onto the returned array, plus everything in it.
+ *
+ * Titles, not ids, for the same reason as `throwawayTags`: a box created
+ * through the UI has no id on the test side until the redirect assertion
+ * resolves, and if that assertion times out Playwright hard-kills the test
+ * before the id can be registered — the box then leaks permanently and breaks
+ * the five-box fixture invariant for every later run. Pushing the title
+ * *before* the box exists closes that window, and also clears a stray left
+ * behind by an earlier killed run.
+ */
+export function throwawayBoxTitles(): string[] {
+  const titles: string[] = []
+  test.afterEach(async () => {
+    if (titles.length === 0) return
+    const pb = await authedPb()
+    while (titles.length > 0) {
+      const title = titles.pop()
+      if (!title) continue
+      const boxes = await pb.collection('storage_boxes').getFullList<{ id: string }>({
+        filter: pb.filter('title = {:title}', { title })
+      })
+      for (const box of boxes) await deleteBoxAndItems(pb, box.id)
+    }
+  })
+  return titles
+}
+
+/**
+ * Registers an `afterEach` that deletes every tag *name* pushed onto the
+ * returned array.
+ *
+ * Names, not ids: a tag created inline through the picker has no id on the
+ * test side, and looking it up by name at teardown time also clears a stray
+ * left behind by an earlier run that was killed mid-test. The seeded
+ * vocabulary is exactly five tags and `/tags` plus the reports counts assert
+ * against it, so an inline-created tag that survives breaks every later run.
+ *
+ * Same reason as `throwawayBoxes` for using a hook rather than a `finally`:
+ * Playwright hard-kills a timed-out test and a `finally` never runs.
+ */
+export function throwawayTags(): string[] {
+  const names: string[] = []
+  test.afterEach(async () => {
+    if (names.length === 0) return
+    const pb = await authedPb()
+    while (names.length > 0) {
+      const name = names.pop()
+      if (!name) continue
+      try {
+        const tag = await pb.collection('storage_tags').getFirstListItem(
+          pb.filter('name = {:name}', { name })
+        )
+        await pb.collection('storage_tags').delete(tag.id)
+      } catch (e) {
+        // Nothing to clean up if the tag was never created (404 on lookup).
+        if (!(e instanceof ClientResponseError) || e.status !== 404) throw e
+      }
+    }
+  })
+  return names
 }

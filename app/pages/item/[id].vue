@@ -25,7 +25,7 @@ const galleryUrls = computed(() => {
 const editOpen = ref(false)
 const { mutateAsync: updateItem, isPending: updatePending } = useUpdateItem()
 const updateError = ref('')
-async function onUpdate(payload: { title: string, description: string, notes: string }) {
+async function onUpdate(payload: { title: string, description: string, notes: string, tags: string[] }) {
   const current = item.value
   if (!current) return
   updateError.value = ''

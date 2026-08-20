@@ -45,7 +45,7 @@ const itemsErrorMessage = computed(() => (itemsError.value ? pbError(itemsError.
 const editOpen = ref(false)
 const { mutateAsync: updateBox, isPending: updatePending } = useUpdateBox()
 const updateError = ref('')
-async function onUpdateBox(payload: { title: string, description: string, location: string }) {
+async function onUpdateBox(payload: { title: string, description: string, location: string, tags: string[] }) {
   const current = box.value
   if (!current) return
   updateError.value = ''
@@ -96,7 +96,7 @@ async function onDelete() {
 const addItemOpen = ref(false)
 const { mutateAsync: createItem, isPending: createItemPending } = useCreateItem()
 const createItemError = ref('')
-async function onCreateItem(payload: { title: string, description: string, notes: string, images: File[] }) {
+async function onCreateItem(payload: { title: string, description: string, notes: string, tags: string[], images: File[] }) {
   const current = box.value
   if (!current) return
   createItemError.value = ''

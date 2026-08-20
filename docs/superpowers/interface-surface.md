@@ -36,8 +36,14 @@ ReportTotalsResult  LocationGroup
 ```
 
 Components share a namespace too: `BoxCard BoxForm BoxSection ItemCard ItemForm
-OfflineBanner InstallPrompt QrCode QrScanner TagPicker ReportGrowth
+OfflineBanner InstallPrompt QrCode QrScanner TagFilter TagPicker ReportGrowth
 ReportItemsPerBox ReportLocations ReportTagUsage ReportTotals`.
+
+`TagFilter` is the tag chip row (`v-model: string[]` of tag ids, the shape
+`BoxListFilters.tagIds` / `SearchFilters.tagIds` take). It renders its own
+loading, error and empty states. On `/search` it is mounted only once there is
+a term — `searchFilter` short-circuits a blank term before the tag clauses, so
+a chip on the idle screen could not do anything.
 
 ## Added in wave 1
 
@@ -79,7 +85,9 @@ inside a submit handler or a `mutationFn`, use `useAuthUser()`, which does not.
 
 ```ts
 PER_PAGE = 30
-tagClauses(tagIds: string[] | undefined, prefix: string): PbFilter   // AND-matching tag clauses
+// AND-matching tag clauses. No `prefix` argument — this doc claimed one for
+// two waves and the function has never had it.
+tagClauses(tagIds?: string[]): { clauses: string[], params: Record<string, unknown> }
 interface PbFilter { raw: string, params: Record<string, unknown> }
 ```
 
@@ -104,6 +112,7 @@ All of these cost real time. They are in `CLAUDE.md` too.
 - **The e2e suite runs with `workers: 1`.** Two workers made `/tags` intermittently render its empty state, only in a full parallel run; the shared Nuxt dev server is the contended resource. Do not raise it.
 - **`describe.configure({ mode: 'serial' })` orders one file only.** Spec files run independently, so a test must never mutate a seeded record — create the boxes, items and tags it writes to.
 - **Put fixture teardown in `test.afterEach`, never a `finally`.** Playwright hard-kills a timed-out test and the `finally` never runs.
+- **Register a fixture before it can be created, not after.** `tests/e2e/helpers.ts` exports `throwawayBoxes()` (by id), `throwawayBoxTitles()` (by title, for a box created through the UI whose id is unknown until the redirect assertion resolves) and `throwawayTags()` (by name). `tagIdByName(pb, name)` looks up one of the seeded five.
 - **Call `pb.autoCancellation(false)`** on a test's PocketBase client. The SDK cancels concurrent requests to the same endpoint, so a parallel fixture build silently keeps only the last write — and the cancelled ones still land server-side afterwards.
 - **Never assert an absolute count on a global aggregate.** `/reports` sums the whole database; derive expected numbers from the API at assertion time.
 - **Service workers are blocked in Playwright** except in `offline.spec.ts`. `page.route` does not intercept service-worker-initiated requests, and a stale-while-revalidate cache will serve a test its own pre-write list back.
