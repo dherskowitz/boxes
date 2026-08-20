@@ -20,6 +20,14 @@ describe('grantableUsers', () => {
     expect(grantableUsers(dir, [grant('u_sam')], 'u_dana').map(u => u.id)).toEqual(['u_rae'])
   })
 
+  it('excludes a user whose row has an unset role, which appears in no list', () => {
+    // `role` is not required, so a grant can come back `''`. Such a row shows
+    // in neither the editors list nor here — offering that user again would
+    // write a second row for the same user and box.
+    expect(grantableUsers(dir, [{ ...grant('u_sam'), role: '' }], 'u_dana').map(u => u.id))
+      .toEqual(['u_rae'])
+  })
+
   it('returns nobody when everyone already has access', () => {
     expect(grantableUsers(dir, [grant('u_sam'), grant('u_rae')], 'u_dana')).toEqual([])
   })

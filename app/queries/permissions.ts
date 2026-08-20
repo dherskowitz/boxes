@@ -29,9 +29,11 @@ export function grantableUsers(
   creatorId: string
 ): AppUser[] {
   if (!directory || !permissions) return []
-  const granted = new Set(
-    permissions.filter(p => p.role === 'editor').map(p => p.user)
-  )
+  // Any existing row counts as granted, whatever its `role` says. `role` is
+  // not required, so a row can come back with `''` — invisible in the editors
+  // list, and filtering on `role === 'editor'` here would offer that user
+  // again and write a second row for the same user and box.
+  const granted = new Set(permissions.map(p => p.user))
   return directory.filter(u => u.id !== creatorId && !granted.has(u.id))
 }
 
