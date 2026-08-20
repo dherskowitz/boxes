@@ -48,15 +48,55 @@ export default defineNuxtConfig({
     dirs: ['queries/**']
   },
 
+  app: {
+    head: {
+      link: [
+        // The .ico is picked up implicitly; these are the ones that are not.
+        { rel: 'icon', type: 'image/svg+xml', href: '/favicon.svg' },
+        { rel: 'apple-touch-icon', sizes: '180x180', href: '/apple-touch-icon.png' }
+      ]
+    }
+  },
+
+  // `nuxt build` with `ssr: false` emits no index.html, which leaves the service
+  // worker's `navigateFallback: '/'` bound to a URL that was never precached —
+  // offline navigation then dies in production while passing every local test.
+  // Prerendering `/` makes an ordinary `pnpm build` produce a working shell, so
+  // the offline guarantee does not depend on remembering to run `pnpm generate`.
+  nitro: {
+    prerender: {
+      routes: ['/']
+    }
+  },
+
   pwa: {
     registerType: 'autoUpdate',
     manifest: {
       name: 'Storage Boxes',
       short_name: 'Storage',
       description: 'Track what is in your storage boxes',
-      theme_color: '#ffffff',
+      // Brand kit: yellow lid on charcoal, warm off-white ground.
+      theme_color: '#F2C94C',
+      background_color: '#F7F5F0',
       display: 'standalone',
-      start_url: '/'
+      start_url: '/',
+      // Android will not offer to install without 192 and 512 (PRD §7.9).
+      // Maskable entries are separate: a `purpose: 'any'` icon gets cropped by
+      // the launcher's mask, so the maskable exports carry their own safe-zone
+      // padding. Dark variants are deliberately omitted — installed PWA icons
+      // do not reliably follow the colour scheme across platforms.
+      icons: [
+        { src: '/icons/icon-72x72.png', sizes: '72x72', type: 'image/png', purpose: 'any' },
+        { src: '/icons/icon-96x96.png', sizes: '96x96', type: 'image/png', purpose: 'any' },
+        { src: '/icons/icon-128x128.png', sizes: '128x128', type: 'image/png', purpose: 'any' },
+        { src: '/icons/icon-144x144.png', sizes: '144x144', type: 'image/png', purpose: 'any' },
+        { src: '/icons/icon-152x152.png', sizes: '152x152', type: 'image/png', purpose: 'any' },
+        { src: '/icons/icon-192x192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
+        { src: '/icons/icon-384x384.png', sizes: '384x384', type: 'image/png', purpose: 'any' },
+        { src: '/icons/icon-512x512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
+        { src: '/icons/maskable-icon-192x192.png', sizes: '192x192', type: 'image/png', purpose: 'maskable' },
+        { src: '/icons/maskable-icon-512x512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' }
+      ]
     },
     workbox: {
       // SPA: every unknown route falls back to the app shell
