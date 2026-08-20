@@ -33,7 +33,14 @@ async function onSignOut() {
       <UButton variant="ghost" data-testid="sign-out" @click="onSignOut">Sign out</UButton>
     </header>
 
-    <main class="flex-1 p-4">
+    <main class="flex-1 space-y-4 p-4">
+      <!-- Both sit above the membership branches on purpose: they stay visible
+           even when the directory gate is showing an error, which offline is
+           exactly when it does. Plain block elements — never an overlay, so
+           the user can still read the cached content underneath. -->
+      <OfflineBanner />
+      <InstallPrompt />
+
       <div v-if="isMembershipPending" data-testid="membership-pending">
         <USkeleton class="h-8 w-48" />
       </div>
