@@ -1,7 +1,7 @@
-import { readFileSync } from 'node:fs'
 import { expect, test } from '@playwright/test'
-import PocketBase, { ClientResponseError } from 'pocketbase'
-import { authedPb, createBox, createItem, throwawayBoxes } from './helpers'
+import type PocketBase from 'pocketbase'
+import { ClientResponseError } from 'pocketbase'
+import { authedPb, authedPbAs, authedUserId, createBox, createItem, throwawayBoxes } from './helpers'
 
 // Comments differ from everything else in the app: the ownership field is
 // `user`, not `created_by`, and edit/delete rights belong to the comment's
@@ -12,27 +12,6 @@ import { authedPb, createBox, createItem, throwawayBoxes } from './helpers'
 // The seeded fixture's two comments (Sam asks, Dana replies, both on "Navy
 // wool peacoat" in seedbox1) are never edited or deleted here — only viewed.
 // Every comment a test mutates, it creates and removes itself.
-
-function pocketbaseUrl(): string {
-  const env = readFileSync('.env', 'utf-8')
-  const match = env.match(/NUXT_PUBLIC_POCKETBASE_URL=(.+)/)
-  const url = match?.[1]
-  if (!url) throw new Error('NUXT_PUBLIC_POCKETBASE_URL not set in .env')
-  return url.trim()
-}
-
-async function pbAs(email: string): Promise<PocketBase> {
-  const pb = new PocketBase(pocketbaseUrl())
-  pb.autoCancellation(false)
-  await pb.collection('users').authWithPassword(email, 'storagedev123')
-  return pb
-}
-
-function authedId(pb: PocketBase): string {
-  const id = pb.authStore.record?.id
-  if (!id) throw new Error('PocketBase client is not authenticated')
-  return id
-}
 
 async function peacoatItemId(pb: PocketBase): Promise<string> {
   const item = await pb.collection('storage_items').getFirstListItem('title = "Navy wool peacoat"')
@@ -71,11 +50,11 @@ test.describe('as the comment author', () => {
   const cleanup = throwawayComments()
 
   test('can edit and delete their own comment', async ({ page }) => {
-    const pb = await pbAs('sam@local.test')
+    const pb = await authedPbAs('sam@local.test')
     const itemId = await peacoatItemId(pb)
     const comment = await pb.collection('storage_comments').create<TestComment>({
       item: itemId,
-      user: authedId(pb),
+      user: authedUserId(pb),
       text: 'Testing the zipper pull now too'
     })
     cleanup.push(pb, comment.id)
@@ -116,7 +95,7 @@ test.describe('as another member', () => {
     // Sam holds the only editor grant, on seedbox1 (the peacoat's box) — rae
     // has plain membership and no grant on it at all, yet comment create is
     // gated only on membership.
-    const pb = await pbAs('rae@local.test')
+    const pb = await authedPbAs('rae@local.test')
     const itemId = await peacoatItemId(pb)
     const text = 'Does this need the button repair kit, or should we just replace it?'
 
@@ -132,7 +111,7 @@ test.describe('as another member', () => {
   })
 
   test('a duplicate submit does not post the comment twice', async ({ page }) => {
-    const pb = await pbAs('rae@local.test')
+    const pb = await authedPbAs('rae@local.test')
     const itemId = await peacoatItemId(pb)
     const text = 'Checked again — the button is intact, must have been a different coat'
 
@@ -169,7 +148,7 @@ test.describe('as another member', () => {
   test('cannot update or delete someone else\'s comment through the API either', async () => {
     // Hiding the button is UX, not the guard — this proves the API rule
     // itself refuses, using the seeded comment without ever mutating it.
-    const pb = await pbAs('rae@local.test')
+    const pb = await authedPbAs('rae@local.test')
     const itemId = await peacoatItemId(pb)
     const samComment = await pb.collection('storage_comments').getFirstListItem<TestComment>(
       pb.filter('item = {:itemId} && text = {:text}', {

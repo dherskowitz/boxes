@@ -1,23 +1,6 @@
-import { readFileSync } from 'node:fs'
 import { expect, test } from '@playwright/test'
-import PocketBase from 'pocketbase'
 import type { StorageTag } from '~/types/pocketbase'
-
-// The playwright test process does not load this worktree's .env the way the
-// `nuxt dev` child process (started by webServer) does, so read it directly
-// rather than hardcoding a URL (CLAUDE.md: never hardcode a PocketBase URL).
-function pocketbaseUrl(): string {
-  if (process.env.NUXT_PUBLIC_POCKETBASE_URL) return process.env.NUXT_PUBLIC_POCKETBASE_URL
-  const match = readFileSync('.env', 'utf-8').match(/^NUXT_PUBLIC_POCKETBASE_URL=(.+)$/m)
-  if (!match) throw new Error('NUXT_PUBLIC_POCKETBASE_URL not found in .env')
-  return match[1].trim()
-}
-
-async function authedClient(email: string) {
-  const pb = new PocketBase(pocketbaseUrl())
-  await pb.collection('users').authWithPassword(email, 'storagedev123')
-  return pb
-}
+import { authedPbAs } from './helpers'
 
 test.describe('as an owner', () => {
   test.use({ storageState: 'tests/e2e/.auth/dana.json' })
@@ -37,7 +20,7 @@ test.describe('as an owner', () => {
   // being usable — whenever the tag is currently 'kitchenware', regardless
   // of whether the test passed.
   test.afterEach(async () => {
-    const pb = await authedClient('dana@local.test')
+    const pb = await authedPbAs('dana@local.test')
     let stray
     try {
       stray = await pb.collection('storage_tags').getFirstListItem(
@@ -63,7 +46,7 @@ test.describe('as an owner', () => {
     // copied string, so seedbox2 (which carries the kitchen tag) comes back
     // with the new name on its expanded tag, with no migration of the box
     // record itself.
-    const pb = await authedClient('dana@local.test')
+    const pb = await authedPbAs('dana@local.test')
     const box = await pb.collection('storage_boxes').getFirstListItem<
       { expand?: { tags?: StorageTag[] } }
     >(pb.filter('qr_id = {:q}', { q: 'seedbox2' }), { expand: 'tags' })
@@ -111,7 +94,7 @@ test.describe('as a plain member', () => {
     // Hiding the button is UX, not access control (CLAUDE.md). Prove the
     // server-side rule independently of the UI: call the API directly as a
     // plain member and assert PocketBase itself refuses the delete.
-    const pb = await authedClient('rae@local.test')
+    const pb = await authedPbAs('rae@local.test')
     const sentimental = await pb.collection('storage_tags').getFirstListItem(
       pb.filter('name = {:name}', { name: 'sentimental' })
     )

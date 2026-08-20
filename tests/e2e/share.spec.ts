@@ -1,7 +1,7 @@
-import { readFileSync } from 'node:fs'
 import { expect, test } from '@playwright/test'
-import PocketBase, { ClientResponseError } from 'pocketbase'
-import { authedPb, createBox, createItem, deleteBoxAndItems } from './helpers'
+import type PocketBase from 'pocketbase'
+import { ClientResponseError } from 'pocketbase'
+import { authedPb, authedPbAs, createBox, createItem, deleteBoxAndItems } from './helpers'
 import type { TestBox } from './helpers'
 
 // No `describe.configure({ mode: 'serial' })`: spec files run independently
@@ -9,22 +9,6 @@ import type { TestBox } from './helpers'
 // Every test that creates a grant removes it again in afterEach — never in a
 // `finally`, because Playwright hard-kills a timed-out test — so the fixture's
 // single seeded grant on seedbox1 is all that survives a run.
-
-function pocketbaseUrl(): string {
-  const env = readFileSync('.env', 'utf-8')
-  const match = env.match(/NUXT_PUBLIC_POCKETBASE_URL=(.+)/)
-  const url = match?.[1]
-  if (!url) throw new Error('NUXT_PUBLIC_POCKETBASE_URL not set in .env')
-  return url.trim()
-}
-
-/** An authenticated SDK client for an arbitrary seeded account, not just dana. */
-async function authedPbAs(email: string): Promise<PocketBase> {
-  const pb = new PocketBase(pocketbaseUrl())
-  pb.autoCancellation(false)
-  await pb.collection('users').authWithPassword(email, 'storagedev123')
-  return pb
-}
 
 async function boxIdFor(pb: PocketBase, qrId: string): Promise<string> {
   const box = await pb.collection('storage_boxes').getFirstListItem(

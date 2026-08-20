@@ -3,26 +3,33 @@ import { randomUUID } from 'node:crypto'
 import { test } from '@playwright/test'
 import PocketBase, { ClientResponseError } from 'pocketbase'
 
+// The playwright test process does not load this worktree's .env the way the
+// `nuxt dev` child process (started by webServer) does, so read it directly
+// rather than hardcoding a URL (CLAUDE.md: never hardcode a PocketBase URL).
 function pocketbaseUrl(): string {
-  const env = readFileSync('.env', 'utf-8')
-  const match = env.match(/NUXT_PUBLIC_POCKETBASE_URL=(.+)/)
-  const url = match?.[1]
-  if (!url) throw new Error('NUXT_PUBLIC_POCKETBASE_URL not set in .env')
-  return url.trim()
+  if (process.env.NUXT_PUBLIC_POCKETBASE_URL) return process.env.NUXT_PUBLIC_POCKETBASE_URL
+  const match = readFileSync('.env', 'utf-8').match(/^NUXT_PUBLIC_POCKETBASE_URL=(.+)$/m)
+  if (!match) throw new Error('NUXT_PUBLIC_POCKETBASE_URL not found in .env')
+  return match[1].trim()
 }
 
-/** An authenticated SDK client for the seeded owner account. */
-export async function authedPb(): Promise<PocketBase> {
+/** An authenticated SDK client for an arbitrary seeded account. */
+export async function authedPbAs(email: string): Promise<PocketBase> {
   const pb = new PocketBase(pocketbaseUrl())
   // The SDK auto-cancels concurrent requests to the same endpoint, which
   // silently drops all but the last of a parallel fixture build — and leaves
   // the cancelled writes to land server-side afterwards.
   pb.autoCancellation(false)
-  await pb.collection('users').authWithPassword('dana@local.test', 'storagedev123')
+  await pb.collection('users').authWithPassword(email, 'storagedev123')
   return pb
 }
 
-function authedUserId(pb: PocketBase): string {
+/** An authenticated SDK client for the seeded owner account. */
+export async function authedPb(): Promise<PocketBase> {
+  return authedPbAs('dana@local.test')
+}
+
+export function authedUserId(pb: PocketBase): string {
   const id = pb.authStore.record?.id
   if (!id) throw new Error('PocketBase client is not authenticated')
   return id
