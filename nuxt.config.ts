@@ -23,7 +23,22 @@ export default defineNuxtConfig({
   },
 
   nuxtQuery: {
-    autoImports: ['useQuery', 'useMutation', 'useQueryClient']
+    autoImports: ['useQuery', 'useMutation', 'useQueryClient'],
+
+    queryClientOptions: {
+      defaultOptions: {
+        mutations: {
+          // TanStack's default mutation networkMode is 'online', which *pauses*
+          // a mutation while offline: `mutationFn` never runs and the promise
+          // never settles, so the button stays stuck loading with no message —
+          // exactly the silent failure PRD §7.8 forbids. 'always' runs the
+          // function so `assertOnline()` can throw immediately with a message
+          // the user can act on. Queries keep the default: a paused query still
+          // serves its cached data, which is the offline read v1 does support.
+          networkMode: 'always'
+        }
+      }
+    }
   },
 
   // `composables/` and `utils/` are scanned by default; `queries/` is not.

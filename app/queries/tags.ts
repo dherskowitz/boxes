@@ -32,13 +32,15 @@ export function useCreateTag() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: ({ name, color }: { name: string, color?: string }) =>
+    mutationFn: ({ name, color }: { name: string, color?: string }) => {
+      assertOnline()
       // The create rule requires created_by to equal the authed user id.
-      $pb.collection('storage_tags').create<StorageTag>({
+      return $pb.collection('storage_tags').create<StorageTag>({
         name: normalizeTagName(name),
         color: color ?? '',
         created_by: userId.value
-      }),
+      })
+    },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: keys.tags.all })
   })
 }
@@ -53,8 +55,10 @@ export function useRenameTag() {
     // storage_tags, and the update rule is just "any enabled member" — no
     // `:isset` check at all (that pattern applies to boxes and items, not
     // tags). Omitting it here is still correct, just for a different reason.
-    mutationFn: ({ id, name }: { id: string, name: string }) =>
-      $pb.collection('storage_tags').update<StorageTag>(id, { name: normalizeTagName(name) }),
+    mutationFn: ({ id, name }: { id: string, name: string }) => {
+      assertOnline()
+      return $pb.collection('storage_tags').update<StorageTag>(id, { name: normalizeTagName(name) })
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: keys.tags.all })
       // A tag is a relation on boxes and items, and both expand it — their
@@ -97,7 +101,10 @@ export function useDeleteTag() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: (id: string) => $pb.collection('storage_tags').delete(id),
+    mutationFn: (id: string) => {
+      assertOnline()
+      return $pb.collection('storage_tags').delete(id)
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: keys.tags.all })
       queryClient.invalidateQueries({ queryKey: keys.boxes.all })

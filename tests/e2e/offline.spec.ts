@@ -27,13 +27,25 @@ test('a previously-viewed box still opens with no network', async ({ page, conte
 
 test('a write attempted offline says it needs connectivity', async ({ page, context }) => {
   await page.goto('/box/new')
+  // Wait for the form before cutting the network. `goto` resolves on `load`,
+  // but under `pnpm dev` the SPA is still pulling its module graph from Vite
+  // over the network at that point — going offline a moment too early kills
+  // those imports and the app never mounts at all, which tests the dev server
+  // rather than the write guard.
+  await expect(page.getByLabel('Title')).toBeVisible()
+
   await context.setOffline(true)
   await page.getByLabel('Title').fill('Loft bedding')
   await page.getByRole('button', { name: 'Create box' }).click()
 
-  await expect(page.getByText(/connect/i)).toBeVisible()
+  // Scoped to the form's own error, not the page: the offline banner also says
+  // "reconnect", so an unscoped text match resolves to two elements and would
+  // pass on the banner alone — which proves nothing about the write.
+  await expect(page.getByTestId('box-form-error')).toContainText(/connect/i)
   // The user's input must survive — losing it is the failure PRD §7.8 forbids.
   await expect(page.getByLabel('Title')).toHaveValue('Loft bedding')
+  // And the control must be usable again, not stuck in its loading state.
+  await expect(page.getByRole('button', { name: 'Create box' })).toBeEnabled()
 
   await context.setOffline(false)
 })

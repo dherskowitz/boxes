@@ -89,6 +89,7 @@ export function useCreateItem() {
 
   return useMutation({
     mutationFn: async (input: NewItem): Promise<StorageItem> => {
+      assertOnline()
       const body = new FormData()
       body.set('box', input.boxId)
       body.set('title', input.title)
@@ -115,8 +116,10 @@ export function useUpdateItem() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: ({ existing, edit }: { existing: StorageItem, edit: ItemEdit }) =>
-      $pb.collection('storage_items').update<StorageItem>(existing.id, itemUpdatePayload(existing, edit)),
+    mutationFn: ({ existing, edit }: { existing: StorageItem, edit: ItemEdit }) => {
+      assertOnline()
+      return $pb.collection('storage_items').update<StorageItem>(existing.id, itemUpdatePayload(existing, edit))
+    },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: keys.items.all })
   })
 }
@@ -126,7 +129,10 @@ export function useDeleteItem() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: (id: string) => $pb.collection('storage_items').delete(id),
+    mutationFn: (id: string) => {
+      assertOnline()
+      return $pb.collection('storage_items').delete(id)
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: keys.items.all })
       queryClient.invalidateQueries({ queryKey: keys.boxes.all })
@@ -145,6 +151,7 @@ export function useMoveItems() {
 
   return useMutation({
     mutationFn: async ({ ids, toBoxId }: { ids: string[], toBoxId: string }) => {
+      assertOnline()
       const failures: string[] = []
       for (const id of ids) {
         try {

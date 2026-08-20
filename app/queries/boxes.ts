@@ -97,6 +97,7 @@ export function useCreateBox() {
 
   return useMutation({
     mutationFn: async (input: NewBox): Promise<StorageBox> => {
+      assertOnline()
       const body = new FormData()
       body.set('title', input.title)
       body.set('description', input.description ?? '')
@@ -133,8 +134,10 @@ export function useUpdateBox() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: ({ existing, edit }: { existing: StorageBox, edit: BoxEdit }) =>
-      $pb.collection('storage_boxes').update<StorageBox>(existing.id, boxUpdatePayload(existing, edit)),
+    mutationFn: ({ existing, edit }: { existing: StorageBox, edit: BoxEdit }) => {
+      assertOnline()
+      return $pb.collection('storage_boxes').update<StorageBox>(existing.id, boxUpdatePayload(existing, edit))
+    },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: keys.boxes.all })
   })
 }
@@ -145,8 +148,10 @@ export function useSetBoxStatus() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: ({ id, status }: { id: string, status: BoxStatus }) =>
-      $pb.collection('storage_boxes').update<StorageBox>(id, { status }),
+    mutationFn: ({ id, status }: { id: string, status: BoxStatus }) => {
+      assertOnline()
+      return $pb.collection('storage_boxes').update<StorageBox>(id, { status })
+    },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: keys.boxes.all })
   })
 }
@@ -157,7 +162,10 @@ export function useDeleteBox() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: (id: string) => $pb.collection('storage_boxes').delete(id),
+    mutationFn: (id: string) => {
+      assertOnline()
+      return $pb.collection('storage_boxes').delete(id)
+    },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: keys.boxes.all })
   })
 }
