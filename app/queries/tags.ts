@@ -48,8 +48,11 @@ export function useRenameTag() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    // Only `name` is sent. Including created_by would trip the update rule's
-    // `:isset = false` check and 403 even when set to the correct value.
+    // Only `name` is sent. Tags are a shared, curated vocabulary rather than
+    // something a single user owns: `created_by` is optional on
+    // storage_tags, and the update rule is just "any enabled member" — no
+    // `:isset` check at all (that pattern applies to boxes and items, not
+    // tags). Omitting it here is still correct, just for a different reason.
     mutationFn: ({ id, name }: { id: string, name: string }) =>
       $pb.collection('storage_tags').update<StorageTag>(id, { name: normalizeTagName(name) }),
     onSuccess: () => {
