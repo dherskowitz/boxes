@@ -114,7 +114,8 @@ pnpm test:e2e    # playwright, boots and stops its own dev server
 - Every write mutation calls `assertOnline()` first, and mutations run with `networkMode: 'always'` (set once in `nuxt.config.ts`). TanStack's default pauses a mutation offline: `mutationFn` never runs and the promise never settles, so the button hangs with no message.
 - `useTags()` and `useAppUsers()` are the only deliberate `getFullList` exceptions — small bounded vocab/roster every picker needs whole. Leave them unpaginated.
 - `app/queries/` is auto-imported via `imports.dirs` in `nuxt.config.ts`. Adding a new top-level `app/` directory does **not** auto-import it — only `composables/` and `utils/` are scanned by default.
-- `login()` checks app membership against PocketBase directly, on purpose — the one read that must not go through nuxt-query, since a cached answer would let a revoked user in. Reject a non-member at the login screen and clear `authStore`; the layout's access-denied state is only for a mid-session revocation.
+- `login()` checks app membership against PocketBase directly, on purpose — the one read that must not go through nuxt-query, since a cached answer would let a revoked user in. Reject a non-member at the login screen and clear `authStore`; the layout's access-denied state is only for a mid-session revocation. The service worker still caches that read, so it is cache-free only above the SDK, never below it.
+- PocketBase applies a **list rule as a filter, not a rejection**: an unauthorised list read is `200` with `{"items":[]}`, never a `401`. Never cache a `storage_*` list response whose request carried no `Authorization` header — the worker otherwise stores "you are a member of nothing" and serves it to a real owner, and offline that never self-heals.
 - A deployed PocketBase must not sit behind Cloudflare Access on `/api/*`; browsers cannot complete a CORS preflight through it. Protect `/_/` instead.
 
 ### UI

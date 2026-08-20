@@ -122,7 +122,31 @@ export default defineNuxtConfig({
           method: 'GET',
           options: {
             cacheName: 'pb-api-storage',
-            cacheableResponse: { statuses: [0, 200] }
+            cacheableResponse: { statuses: [0, 200] },
+            plugins: [
+              {
+                // Only cache a response the request was authenticated for.
+                //
+                // PocketBase applies a list rule as a *filter*, not a
+                // rejection: an unauthenticated read of storage_app_users is
+                // 200 with `{"items":[]}`, never a 401. `cacheableResponse`
+                // above happily stores that, and stale-while-revalidate then
+                // serves "you are a member of nothing" to a real owner — who
+                // gets rejected at the login screen (the SDK sits *above* the
+                // worker, so login()'s deliberate read-past-nuxt-query is
+                // served from here too) and access-denied in the layout.
+                // Online it self-heals on revalidation; offline it does not.
+                // The SDK sets Authorization only when a token is present, so
+                // its presence is exactly what separates the two.
+                //
+                // Deliberately not applied to /api/files/ below: images load
+                // through <img src>, which carries no header at all, so the
+                // same guard there would cache nothing and break offline
+                // photos outright.
+                cacheWillUpdate: async ({ request, response }) =>
+                  request.headers.get('Authorization') ? response : null
+              }
+            ]
           }
         },
         {
