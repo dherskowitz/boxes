@@ -40,7 +40,7 @@ export function countUnread(
 export function useUnreadComments(itemId: Ref<string>, comments: Ref<StorageComment[] | undefined>) {
   const { userId } = useAuthUser()
 
-  function lastViewed(): string | null {
+  function readLastViewed(): string | null {
     try {
       return localStorage.getItem(storageKey(itemId.value))
     } catch {
@@ -48,7 +48,12 @@ export function useUnreadComments(itemId: Ref<string>, comments: Ref<StorageComm
     }
   }
 
-  return computed(() => countUnread(comments.value, lastViewed(), userId.value))
+  // Captured once at setup, not read fresh on every recompute: a caller
+  // typically calls markItemRead() once the thread has been seen, and that
+  // must not retroactively zero out the badge this visit was meant to show.
+  const lastViewed = readLastViewed()
+
+  return computed(() => countUnread(comments.value, lastViewed, userId.value))
 }
 
 /** Call when the thread is viewed, to clear the badge. */
