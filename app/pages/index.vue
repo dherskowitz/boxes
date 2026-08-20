@@ -3,6 +3,13 @@
 // toggle adds a second section rather than swapping the list, so a user with
 // 10 active and 2 archived boxes sees all 12.
 const showArchived = ref(false)
+
+const searchTerm = ref('')
+function onSearchSubmit() {
+  const term = searchTerm.value.trim()
+  if (!term) return
+  navigateTo({ path: '/search', query: { q: term } })
+}
 </script>
 
 <template>
@@ -14,6 +21,8 @@ const showArchived = ref(false)
         <UButton to="/box/new">New box</UButton>
       </div>
     </div>
+
+    <SearchBar v-model="searchTerm" @submit="onSearchSubmit" />
 
     <UCheckbox v-model="showArchived" data-testid="show-archived" label="Show archived boxes" />
 
