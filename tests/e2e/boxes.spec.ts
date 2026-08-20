@@ -1,25 +1,9 @@
-import { readFileSync } from 'node:fs'
-import PocketBase from 'pocketbase'
 import { expect, test } from '@playwright/test'
+import { authedPb, throwawayBoxes } from './helpers'
 
 test.use({ storageState: 'tests/e2e/.auth/dana.json' })
-// One of these tests archives every active box and restores it afterward —
-// run the file serially so that mutation can't race the read-only tests.
-test.describe.configure({ mode: 'serial' })
 
-function pocketbaseUrl(): string {
-  const env = readFileSync('.env', 'utf-8')
-  const match = env.match(/NUXT_PUBLIC_POCKETBASE_URL=(.+)/)
-  const url = match?.[1]
-  if (!url) throw new Error('NUXT_PUBLIC_POCKETBASE_URL not set in .env')
-  return url.trim()
-}
-
-async function authedPb(): Promise<PocketBase> {
-  const pb = new PocketBase(pocketbaseUrl())
-  await pb.collection('users').authWithPassword('dana@local.test', 'storagedev123')
-  return pb
-}
+const throwaway = throwawayBoxes()
 
 test('lists active boxes and hides archived ones by default', async ({ page }) => {
   await page.goto('/')
@@ -29,10 +13,13 @@ test('lists active boxes and hides archived ones by default', async ({ page }) =
   await expect(page.getByText('College photo albums')).toBeHidden()
 })
 
-test('can reveal archived boxes', async ({ page }) => {
+test('adds archived boxes as a second section rather than swapping the list', async ({ page }) => {
   await page.goto('/')
   await page.getByTestId('show-archived').click()
-  await expect(page.getByText('College photo albums')).toBeVisible()
+  await expect(page.getByTestId('box-section-archived').getByText('College photo albums')).toBeVisible()
+  // PRD §7.2: archived boxes are *included*, not substituted — the active
+  // boxes must still be on screen.
+  await expect(page.getByTestId('box-section-active').getByText('Winter coats and boots')).toBeVisible()
 })
 
 test('opens a box from its card', async ({ page }) => {
@@ -41,20 +28,16 @@ test('opens a box from its card', async ({ page }) => {
   await expect(page).toHaveURL('/box/seedbox1')
 })
 
-test('shows the empty state when every active box is archived', async ({ page }) => {
-  const pb = await authedPb()
-  const active = await pb.collection('storage_boxes').getFullList({ filter: 'status = "active"' })
-  try {
-    for (const box of active) {
-      await pb.collection('storage_boxes').update(box.id, { status: 'archived' })
-    }
-    await page.goto('/')
-    await expect(page.getByTestId('box-list-empty')).toBeVisible()
-  } finally {
-    for (const box of active) {
-      await pb.collection('storage_boxes').update(box.id, { status: 'active' })
-    }
-  }
+test('shows the empty state when there are no active boxes', async ({ page }) => {
+  // The index is a global list, so a genuinely empty database would mean
+  // archiving boxes other spec files are reading concurrently. Stubbing the
+  // list response exercises the same render branch and cannot corrupt a
+  // shared fixture.
+  await page.route('**/api/collections/storage_boxes/records?*', route =>
+    route.fulfill({ json: { page: 1, perPage: 30, totalItems: 0, totalPages: 0, items: [] } })
+  )
+  await page.goto('/')
+  await expect(page.getByTestId('box-list-empty-active')).toBeVisible()
 })
 
 test('creates a box with only a title and lands on its page', async ({ page }) => {
@@ -67,10 +50,19 @@ test('creates a box with only a title and lands on its page', async ({ page }) =
   const qrId = new URL(page.url()).pathname.split('/').pop()
   const pb = await authedPb()
   const created = await pb.collection('storage_boxes').getFirstListItem(pb.filter('qr_id = {:qrId}', { qrId }))
-  await pb.collection('storage_boxes').delete(created.id)
+  throwaway.push(created.id)
 })
 
 test('disables the submit button while the create request is pending', async ({ page }) => {
+  // Hold the create request open. Against a local PocketBase the round trip
+  // can finish inside a single assertion poll, which made this pass or fail on
+  // machine load rather than on the pending state actually working.
+  await page.route('**/api/collections/storage_boxes/records', async (route) => {
+    if (route.request().method() !== 'POST') return route.continue()
+    await new Promise(resolve => setTimeout(resolve, 1500))
+    return route.continue()
+  })
+
   await page.goto('/box/new')
   await page.getByLabel('Title').fill('Loft bedding, take two')
   const button = page.getByRole('button', { name: 'Create box' })
@@ -84,5 +76,5 @@ test('disables the submit button while the create request is pending', async ({ 
   const qrId = new URL(page.url()).pathname.split('/').pop()
   const pb = await authedPb()
   const created = await pb.collection('storage_boxes').getFirstListItem(pb.filter('qr_id = {:qrId}', { qrId }))
-  await pb.collection('storage_boxes').delete(created.id)
+  throwaway.push(created.id)
 })
