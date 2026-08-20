@@ -1,7 +1,7 @@
 # Demo data
 
 `scripts/pb-demo-seed.py` builds a collection big enough to actually look at:
-**40 boxes, ~410 items, 14 tags, ~90 comments, 8 editor grants, ~180 photos**,
+**40 boxes, 388 items, 14 tags, ~90 comments, 8 editor grants, ~180 photos**,
 across six accounts.
 
 It exists because the test fixture is deliberately tiny and exact. With 5 boxes
@@ -23,8 +23,8 @@ The cleanest way to keep both is a second PocketBase, using the same port and
 compose-project mechanism the parallel worktrees use:
 
 ```bash
-PB_PORT=8099 docker compose -p storage-demo up -d
-python3 scripts/pb-demo-seed.py http://localhost:8099
+pnpm demo:up      # PB_PORT=8099 docker compose -p storage-demo up -d
+pnpm seed:demo    # seeds http://localhost:8099
 ```
 
 Then point the app at it for a browsing session by setting `.env`:
@@ -34,19 +34,26 @@ NUXT_PUBLIC_POCKETBASE_URL=http://localhost:8099
 ```
 
 Change it back to `http://localhost:8090` before running the e2e suite. Tear the
-demo instance down with `docker compose -p storage-demo down -v`.
+demo instance down with `pnpm demo:down` (this removes its volume).
 
-If you would rather use the main instance, that works too — just run
-`python3 scripts/pb-seed.py http://localhost:8090` before `pnpm test:e2e`.
+If you would rather use the main instance, that works too — just run `pnpm seed`
+(the fixture, on 8090) before `pnpm test:e2e`.
 
 ## Options
 
 ```bash
-python3 scripts/pb-demo-seed.py <url>              # everything, with photos
-python3 scripts/pb-demo-seed.py <url> --no-photos  # ~6x faster, no images
+pnpm seed                     # the e2e fixture, on 8090
+pnpm demo:up                  # start the demo instance on 8099
+pnpm seed:demo                # everything, with photos
+pnpm seed:demo --no-photos    # faster, no images
+pnpm demo:down                # stop it and drop its volume
+
+# --backdate needs the compose project name, so call the script directly:
 COMPOSE_PROJECT=storage-demo \
-  python3 scripts/pb-demo-seed.py <url> --backdate  # spread dates over 18 months
+  python3 scripts/pb-demo-seed.py http://localhost:8099 --backdate
 ```
+
+Flags after `pnpm seed:demo` are passed straight through to the script.
 
 Local URLs only — it refuses anything that is not `localhost` or `127.0.0.1`.
 It is idempotent: it wipes the `storage_*` records and its own `@local.test`
@@ -54,7 +61,8 @@ accounts, then rebuilds. The `app_memberships` wipe is scoped to those accounts,
 so it never disturbs another app's rows on a shared instance.
 
 Output is deterministic — a fixed random seed means the same boxes, items and
-photos every run.
+photos every run, and `--no-photos` produces the same 388 items as a full run
+rather than a different set.
 
 ### `--backdate`, and why it is opt-in
 

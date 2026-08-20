@@ -364,9 +364,11 @@ def main():
             "description": "",
             "tags": [tags[t] for t in tag_names if t in tags],
         }
+        # The tint is drawn whether or not photos are on, so --no-photos does
+        # not shift the random stream and produce a different set of items.
+        tint = (rng.randint(30, 90), rng.randint(40, 100), rng.randint(50, 110))
         files = []
         if photos and index % 3 != 2:
-            tint = (rng.randint(30, 90), rng.randint(40, 100), rng.randint(50, 110))
             files.append(("images", f"{qr}-cover.jpg", make_photo(label, tint)))
             photos_made += 1
         body, ctype = multipart(fields, files)
@@ -387,10 +389,11 @@ def main():
                 "tags": [tags[t] for t in rng.sample(tag_names, len(tag_names))
                          if t in tags] if tag_names else [],
             }
+            wants_photo = rng.random() < 0.4
+            item_tint = (rng.randint(40, 120), rng.randint(40, 120), rng.randint(40, 120))
             item_files = []
-            if photos and rng.random() < 0.4:
-                tint = (rng.randint(40, 120), rng.randint(40, 120), rng.randint(40, 120))
-                item_files.append(("images", "item.jpg", make_photo(item_name, tint)))
+            if photos and wants_photo:
+                item_files.append(("images", "item.jpg", make_photo(item_name, item_tint)))
                 photos_made += 1
             ibody, ictype = multipart(item_fields, item_files)
             item = call(base, "/collections/storage_items/records", token,

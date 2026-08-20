@@ -53,11 +53,10 @@ docker compose -p storage-<slot> down -v   # when done
 The `-p` project name is what isolates the `pb_data` volume — a distinct
 `PB_PORT` alone still shares one database across worktrees.
 
-Bigger dataset for looking at the app — 40 boxes, ~410 items, photos:
+Bigger dataset for looking at the app — 40 boxes, 388 items, photos:
 
 ```bash
-PB_PORT=8099 docker compose -p storage-demo up -d
-python3 scripts/pb-demo-seed.py http://localhost:8099
+pnpm demo:up && pnpm seed:demo   # 40 boxes on its own instance (8099)
 ```
 
 It is **not** the e2e fixture; run `pb-seed.py` again before `pnpm test:e2e`.
