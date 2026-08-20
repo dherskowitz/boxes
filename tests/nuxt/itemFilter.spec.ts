@@ -78,6 +78,14 @@ describe('itemFilter', () => {
     expect(raw).not.toContain('t"')
   })
 
+  // The term is the one genuinely user-typed input, so it gets the same
+  // executable check the box id already has: escaped, not interpolated.
+  it('escapes an injected quote in the term so the executable filter cannot break out', () => {
+    const pb = new PocketBase('http://localhost')
+    const { raw, params } = itemFilter({ term: 'x" || id != "' })
+    expect(pb.filter(raw, params)).not.toContain('id != ""')
+  })
+
   it('trims a whitespace-only term rather than filtering on it', () => {
     expect(itemFilter({ term: '   ' }).raw).not.toContain('title ~')
   })
