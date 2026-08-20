@@ -5,6 +5,15 @@ const props = defineProps<{
   item: StorageItem
   selectable?: boolean
   selected?: boolean
+  /**
+   * Show the parent box under the title. Off by default: box detail already
+   * knows which box it is showing. /items lists across boxes, where a row
+   * without its box says nothing, and passes it on.
+   *
+   * Needs the record to have been fetched with `expand: 'box'`; without it
+   * nothing is rendered rather than an "In" with nothing after it.
+   */
+  showBox?: boolean
 }>()
 
 const emit = defineEmits<{ 'update:selected': [value: boolean] }>()
@@ -15,6 +24,12 @@ const thumbnailUrl = computed(() => {
   const [first] = props.item.images
   if (!first) return null
   return $pb.files.getURL(props.item, first, { thumb: '100x100' })
+})
+
+const boxLabel = computed(() => {
+  if (!props.showBox) return ''
+  const box = props.item.expand?.box
+  return box ? box.title || box.qr_id : ''
 })
 
 function onToggle(value: boolean | 'indeterminate') {
@@ -35,7 +50,10 @@ function onToggle(value: boolean | 'indeterminate') {
       <div v-else class="flex h-12 w-12 items-center justify-center border">
         <span class="text-xs">No photo</span>
       </div>
-      <span>{{ item.title }}</span>
+      <div class="flex flex-col gap-1">
+        <span>{{ item.title }}</span>
+        <span v-if="boxLabel" data-testid="item-card-box" class="text-sm">In {{ boxLabel }}</span>
+      </div>
     </NuxtLink>
   </div>
 </template>

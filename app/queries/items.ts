@@ -4,15 +4,45 @@ import { keys, PER_PAGE, tagClauses } from '~/queries/keys'
 
 /**
  * Build the item list filter template, for use with `$pb.filter(raw, params)`.
- * Exported for testing. Tag ids are bound as placeholders, never interpolated
- * — see the note on `boxFilter`.
+ * Exported for testing. Every user value is bound as a placeholder, never
+ * interpolated — see the note on `boxFilter`.
+ *
+ * Serves two callers with opposite defaults for the box: a box detail page
+ * passes a box id and gets that box's items, archived or not, because inside
+ * a box you are already scoped. /items passes none and gets every item, minus
+ * the ones belonging to an archived box.
+ *
+ * The term clause is a deliberate duplicate of the item branch of
+ * `searchFilter` in `app/queries/search.ts` — keep the two in step. It is not
+ * shared because that function short-circuits a blank term to `1 = 2`, and
+ * /items needs the opposite: no term means show everything, paginated.
  */
 export function itemFilter(filters: ItemListFilters): PbFilter {
   const tags = tagClauses(filters.tagIds)
-  return {
-    raw: ['box = {:boxId}', ...tags.clauses].join(' && '),
-    params: { boxId: filters.boxId, ...tags.params }
+  const params: Record<string, unknown> = { ...tags.params }
+  const clauses: string[] = []
+
+  if (filters.boxId) {
+    clauses.push('box = {:boxId}')
+    params.boxId = filters.boxId
+  } else {
+    // Browsing across boxes: exclude archived ones. An item carries no status
+    // of its own, so exclusion travels through the relation.
+    clauses.push('box.status = {:status}')
+    params.status = 'active'
   }
+
+  clauses.push(...tags.clauses)
+
+  const term = (filters.term ?? '').trim()
+  if (term) {
+    clauses.push('(title ~ {:term} || description ~ {:term} || notes ~ {:term})')
+    params.term = term
+  }
+
+  // Unreachable today — both branches above add a clause — but an empty `raw`
+  // would be a silent full-table filter, so it is impossible by construction.
+  return { raw: clauses.join(' && ') || '1 = 1', params }
 }
 
 export function useItemList(filters: Ref<ItemListFilters>) {
@@ -23,10 +53,14 @@ export function useItemList(filters: Ref<ItemListFilters>) {
       const { raw, params } = itemFilter(filters.value)
       return $pb.collection('storage_items').getList<StorageItem>(filters.value.page ?? 1, PER_PAGE, {
         filter: $pb.filter(raw, params),
-        expand: 'tags',
+        // `box` as well as `tags`: /items lists across boxes, where a row
+        // without its parent box is meaningless.
+        expand: 'tags,box',
         sort: '-created'
       })
     },
+    // '' is not the same as absent. Box detail passes '' while its box is still
+    // loading and must not fire the browse-all query; absent means /items.
     enabled: computed(() => filters.value.boxId !== '')
   })
 }

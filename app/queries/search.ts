@@ -22,6 +22,9 @@ export type SearchResult = { kind: 'box', box: StorageBox } | { kind: 'item', it
  *
  * A blank term returns a filter that matches nothing, never one that matches
  * everything — landing on an empty search must not return the whole database.
+ * That default is why `itemFilter` in `app/queries/items.ts` duplicates the
+ * item term clause below instead of calling this: /items needs the opposite,
+ * where no term shows everything. The two copies must stay in step.
  *
  * `tagIds` AND-matches, via the same `tagClauses()` both list filters use:
  * boxes and items each carry tags, so both kinds narrow by them.
