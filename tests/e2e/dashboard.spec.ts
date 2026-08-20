@@ -96,3 +96,14 @@ test('offline, warns the figures are stale but still lists boxes', async ({ page
   await context.setOffline(false)
   await expect(page.getByTestId('dashboard-stale')).toBeHidden()
 })
+
+// PRD §7.11 lists search on the dashboard too. searchIndexBar.spec.ts covers
+// the /boxes copy; without this one a change to the query param would go red
+// there and silently break the front door.
+test('searching from the dashboard lands on the search page with results', async ({ page }) => {
+  await page.goto('/')
+  await page.getByLabel('Search').fill('Winter coats')
+  await page.getByRole('button', { name: 'Search' }).click()
+  await expect(page).toHaveURL(/\/search\?q=Winter(\+|%20)coats/)
+  await expect(page.getByTestId('search-result-box').getByText('Winter coats and boots')).toBeVisible()
+})
