@@ -101,7 +101,7 @@ test.describe('as the box creator', () => {
 
     await page.getByTestId('delete-box').click()
     await page.getByTestId('confirm-delete-box').click()
-    await expect(page).toHaveURL('/')
+    await expect(page).toHaveURL('/boxes')
     await expect(page.getByText(box.title)).toBeHidden()
   })
 

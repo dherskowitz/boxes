@@ -85,7 +85,7 @@ async function onDelete() {
   try {
     await deleteBox(current.id)
     deleteOpen.value = false
-    await navigateTo('/')
+    await navigateTo('/boxes')
   } catch (e) {
     deleteError.value = pbError(e)
     deleteOpen.value = false
@@ -160,7 +160,7 @@ async function onMove() {
 
     <div v-else-if="isNotFound" data-testid="box-not-found" class="flex flex-col gap-3">
       <p>Box not found.</p>
-      <UButton to="/">Back to boxes</UButton>
+      <UButton to="/boxes">Back to boxes</UButton>
     </div>
 
     <UAlert v-else-if="boxIsError" color="error" :description="boxErrorMessage" />

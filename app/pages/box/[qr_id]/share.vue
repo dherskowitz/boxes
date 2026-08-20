@@ -94,7 +94,7 @@ async function onRevoke(permission: StorageBoxPermission) {
 
     <div v-else-if="isNotFound" data-testid="share-box-not-found" class="flex flex-col gap-3">
       <p>Box not found.</p>
-      <UButton to="/">Back to boxes</UButton>
+      <UButton to="/boxes">Back to boxes</UButton>
     </div>
 
     <UAlert v-else-if="boxIsError" color="error" :description="boxErrorMessage" />

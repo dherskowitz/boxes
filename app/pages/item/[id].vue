@@ -66,7 +66,7 @@ async function onDelete() {
 
     <div v-else-if="isNotFound" data-testid="item-not-found" class="flex flex-col gap-3">
       <p>Item not found.</p>
-      <UButton to="/">Back to boxes</UButton>
+      <UButton to="/boxes">Back to boxes</UButton>
     </div>
 
     <UAlert v-else-if="isError" color="error" :description="errorMessage" />
