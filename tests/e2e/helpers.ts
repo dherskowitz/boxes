@@ -135,6 +135,35 @@ export function throwawayBoxes(): string[] {
 }
 
 /**
+ * Registers an `afterEach` that removes every box whose *title* was pushed
+ * onto the returned array, plus everything in it.
+ *
+ * Titles, not ids, for the same reason as `throwawayTags`: a box created
+ * through the UI has no id on the test side until the redirect assertion
+ * resolves, and if that assertion times out Playwright hard-kills the test
+ * before the id can be registered — the box then leaks permanently and breaks
+ * the five-box fixture invariant for every later run. Pushing the title
+ * *before* the box exists closes that window, and also clears a stray left
+ * behind by an earlier killed run.
+ */
+export function throwawayBoxTitles(): string[] {
+  const titles: string[] = []
+  test.afterEach(async () => {
+    if (titles.length === 0) return
+    const pb = await authedPb()
+    while (titles.length > 0) {
+      const title = titles.pop()
+      if (!title) continue
+      const boxes = await pb.collection('storage_boxes').getFullList<{ id: string }>({
+        filter: pb.filter('title = {:title}', { title })
+      })
+      for (const box of boxes) await deleteBoxAndItems(pb, box.id)
+    }
+  })
+  return titles
+}
+
+/**
  * Registers an `afterEach` that deletes every tag *name* pushed onto the
  * returned array.
  *

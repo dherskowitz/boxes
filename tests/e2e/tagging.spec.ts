@@ -1,10 +1,14 @@
 import type { Page } from '@playwright/test'
 import { expect, test } from '@playwright/test'
-import { authedPb, createBox, tagIdByName, throwawayBoxes, throwawayTags } from './helpers'
+import { authedPb, createBox, createItem, tagIdByName, throwawayBoxTitles, throwawayBoxes, throwawayTags } from './helpers'
 
 test.use({ storageState: 'tests/e2e/.auth/dana.json' })
 
 const throwaway = throwawayBoxes()
+// A box created through the UI has no id until the redirect assertion
+// resolves, and that assertion can time out — register it by title up front so
+// a hard-killed test cannot leak it into the five-box fixture.
+const throwawayTitles = throwawayBoxTitles()
 // Every tag these tests create inline is removed after each test — the seeded
 // vocabulary is exactly five tags, and /tags and the reports counts read it.
 const throwawayTagNames = throwawayTags()
@@ -32,6 +36,7 @@ test('tags a box with an existing tag from autocomplete', async ({ page }) => {
   const pb = await authedPb()
   const winterId = await tagIdByName(pb, 'winter')
 
+  throwawayTitles.push('Ski gear and thermals')
   await page.goto('/box/new')
   await page.getByLabel('Title').fill('Ski gear and thermals')
   await pickTag(page, 'winter')
@@ -42,7 +47,6 @@ test('tags a box with an existing tag from autocomplete', async ({ page }) => {
 
   const qrId = new URL(page.url()).pathname.split('/').pop() ?? ''
   const created = await boxByQrId(qrId)
-  throwaway.push(created.id)
   expect(created.tags).toContain(winterId)
 })
 
@@ -50,6 +54,7 @@ test('creates a new tag inline while tagging a box', async ({ page }) => {
   const newTag = 'camping gear'
   throwawayTagNames.push(newTag)
 
+  throwawayTitles.push('Tent, poles and the two-burner stove')
   await page.goto('/box/new')
   await page.getByLabel('Title').fill('Tent, poles and the two-burner stove')
   await pickTag(page, newTag)
@@ -59,7 +64,6 @@ test('creates a new tag inline while tagging a box', async ({ page }) => {
 
   const qrId = new URL(page.url()).pathname.split('/').pop() ?? ''
   const created = await boxByQrId(qrId)
-  throwaway.push(created.id)
 
   const pb = await authedPb()
   const createdTagId = await tagIdByName(pb, newTag)
@@ -105,4 +109,31 @@ test('tags an item with an existing tag from autocomplete', async ({ page }) => 
     pb.filter('box = {:boxId}', { boxId: box.id })
   )
   expect(item.tags).toContain(kitchenId)
+})
+
+test('preserves existing tags when editing an item without touching them', async ({ page }) => {
+  // The box-side twin of this lives above. Same quiet failure, own coverage:
+  // `itemUpdatePayload` diffs `edit.tags` against the record's current tags,
+  // so an ItemForm that initialises the picker to [] sends `tags: []` and
+  // wipes the item's tags on a save that only changed the title.
+  const pb = await authedPb()
+  const winterId = await tagIdByName(pb, 'winter')
+  const box = await createBox(pb, { title: 'Loft, gable end' })
+  throwaway.push(box.id)
+  const item = await createItem(pb, {
+    boxId: box.id,
+    title: 'Merino base layers, two sets',
+    tags: [winterId]
+  })
+
+  await page.goto(`/item/${item.id}`)
+  await page.getByTestId('edit-item').click()
+  await expect(page.getByTestId(`selected-tag-${winterId}`)).toBeVisible()
+
+  await page.getByLabel('Title').fill('Merino base layers, three sets')
+  await page.getByRole('button', { name: 'Save changes' }).click()
+  await expect(page.getByRole('heading', { name: 'Merino base layers, three sets' })).toBeVisible()
+
+  const after = await pb.collection('storage_items').getOne<{ tags: string[] }>(item.id)
+  expect(after.tags).toEqual([winterId])
 })
