@@ -147,8 +147,24 @@ cannot actually be reached today, since the no-box branch always adds a status c
 but an empty `raw` would be a silent full-table filter and is worth making impossible
 by construction.
 
-`useItemList` drops its `enabled: boxId !== ''` gate. Box detail always passes a box
-id and is unaffected; `/items` passes none and must still query.
+`useItemList` keeps an `enabled` gate, but on a corrected condition:
+
+```ts
+// '' is not the same as absent. Box detail passes '' while its box is still
+// loading and must NOT fire the browse-all query; absent means /items.
+enabled: computed(() => filters.value.boxId !== '')
+```
+
+**An earlier draft of this spec said "box detail always passes a box id and is
+unaffected". That was wrong.** It passes `box.value?.id ?? ''` — an empty string
+while the box query is in flight. Since `''` is falsy, dropping the gate entirely
+would send every box detail page load down the browse-all branch and fetch thirty
+unrelated items with `expand=tags,box`. Nothing renders wrong (the item markup sits
+behind `v-else-if="box"`), but it is a wasted round trip on the slow-connection
+target, competing with the request that actually blocks the screen.
+
+Two falsy values with opposite meanings sit three lines apart here. The comment is
+part of the fix.
 
 `keys.items.list(filters)` already folds the whole filter object into the key, so the
 new fields participate in caching with no key change.

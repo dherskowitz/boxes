@@ -95,7 +95,7 @@ it('combines a box id and a term without the archived clause', () => {
 That last one matters: inside a box you are already scoped, and adding a status clause there would hide the items of an archived box from its own detail page.
 
 - [ ] **Step 2: Run and watch them fail**
-- [ ] **Step 3: Implement** — the spec §4.1 has the exact shape. Drop `useItemList`'s `enabled: boxId !== ''` gate; box detail always passes one and is unaffected.
+- [ ] **Step 3: Implement** — the spec §4.1 has the exact shape. **Keep** `useItemList`'s `enabled: computed(() => filters.value.boxId !== '')` gate — do not drop it. Box detail passes `box.value?.id ?? ''`, so an empty string means "still loading, do not query", while an absent `boxId` means `/items` and must query. Both are falsy; only the gate distinguishes them.
 - [ ] **Step 4: Run the tests**
 - [ ] **Step 5: Confirm box detail still works** — `pnpm test:e2e tests/e2e/boxDetail.spec.ts tests/e2e/itemDetail.spec.ts`. This change touches the query every box page uses.
 - [ ] **Step 6: Commit** — `Let the item filter span boxes and match a term`
