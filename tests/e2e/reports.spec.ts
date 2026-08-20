@@ -1,4 +1,6 @@
 import { expect, test } from '@playwright/test'
+import { authedPb } from './helpers'
+import type { ReportBoxFill, ReportTagUsage } from '~/types/pocketbase'
 
 test.use({ storageState: 'tests/e2e/.auth/rae.json' })
 
@@ -19,11 +21,27 @@ function normalize(text: string): string {
 
 test('shows collection totals to any member', async ({ page }) => {
   await page.goto('/reports')
-  await expect(page.getByTestId('total-boxes')).toHaveText('5', { timeout: CHART_TIMEOUT })
-  await expect(page.getByTestId('total-items')).toHaveText('9')
-  await expect(page.getByTestId('total-tags')).toHaveText('5')
-  // The seed uploads no images — zero is correct, not a bug.
-  await expect(page.getByTestId('total-photos')).toHaveText('0')
+  // Other spec files run concurrently and create/delete their own boxes and
+  // items, so the database-wide totals this screen aggregates are a moving
+  // target — see CLAUDE.md. Read the same view collections the page itself
+  // queries (app/queries/reports.ts) right before asserting, rather than
+  // hardcoding the seed's counts, so the test checks that the screen reflects
+  // the database instead of racing whatever else is writing to it.
+  await expect(page.getByTestId('total-boxes')).toBeVisible({ timeout: CHART_TIMEOUT })
+  const pb = await authedPb()
+  const [boxFill, tagUsage] = await Promise.all([
+    pb.collection('storage_report_box_fill').getFullList<ReportBoxFill>(),
+    pb.collection('storage_report_tag_usage').getFullList<ReportTagUsage>()
+  ])
+  const expectedBoxes = boxFill.length
+  const expectedItems = boxFill.reduce((sum, box) => sum + box.item_count, 0)
+  const expectedTags = tagUsage.length
+  const expectedPhotos = boxFill.reduce((sum, box) => sum + box.photo_count, 0)
+
+  await expect(page.getByTestId('total-boxes')).toHaveText(String(expectedBoxes))
+  await expect(page.getByTestId('total-items')).toHaveText(String(expectedItems))
+  await expect(page.getByTestId('total-tags')).toHaveText(String(expectedTags))
+  await expect(page.getByTestId('total-photos')).toHaveText(String(expectedPhotos))
 })
 
 test('ranks crowded boxes, excludes archived, and truncates a long title', async ({ page }) => {
@@ -89,12 +107,20 @@ test('groups boxes by location in the donut, including a distinct archived split
   }
 
   // seedbox5 is archived — it must still count toward the location total
-  // (Attic) but also be visible in the separate status split.
+  // (Attic) but also be visible in the separate status split. The
+  // active/archived counts are totals over every box in the database, so —
+  // like the totals test above — they race any other spec creating or
+  // deleting a box concurrently; derive the expected split from the API
+  // instead of hardcoding the seed's counts.
   const statusChart = page.getByTestId('locations-status-chart')
   await expect(statusChart).toBeVisible()
+  const pb = await authedPb()
+  const boxFill = await pb.collection('storage_report_box_fill').getFullList<ReportBoxFill>()
+  const expectedActive = boxFill.filter(box => box.status === 'active').length
+  const expectedArchived = boxFill.filter(box => box.status === 'archived').length
   const statusText = await statusChart.innerText()
-  expect(statusText).toContain('Active (4)')
-  expect(statusText).toContain('Archived (1)')
+  expect(statusText).toContain(`Active (${expectedActive})`)
+  expect(statusText).toContain(`Archived (${expectedArchived})`)
 })
 
 test('bars the single seeded month of growth rather than rendering a blank area chart', async ({ page }) => {
