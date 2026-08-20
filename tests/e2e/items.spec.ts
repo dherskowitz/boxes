@@ -78,6 +78,22 @@ test('distinguishes no-items-yet from nothing-matches', async ({ page }) => {
   await expect(page.getByTestId('items-no-matches')).toBeHidden()
 })
 
+test('tells a user with no items at all that they have none', async ({ page }) => {
+  // No seeded user can reach this naturally — storage_items.listRule grants
+  // every enabled member every item — so the empty page is stubbed rather than
+  // reached by emptying the fixture every other spec depends on.
+  await page.route('**/api/collections/storage_items/records*', route =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: '{"page":1,"perPage":30,"totalItems":0,"totalPages":0,"items":[]}'
+    })
+  )
+  await page.goto('/items')
+  await expect(page.getByTestId('items-empty')).toBeVisible()
+  await expect(page.getByTestId('items-no-matches')).toBeHidden()
+})
+
 test('shows a loading state before the list arrives', async ({ page }) => {
   await page.route('**/api/collections/storage_items/records*', async (route) => {
     await new Promise(resolve => setTimeout(resolve, 1500))
