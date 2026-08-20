@@ -12,6 +12,16 @@ export default defineConfig({
   // 30s default, failing only the first test in a run.
   timeout: 60_000,
   expect: { timeout: 15_000 },
+
+  // One worker on purpose. With two, /tags intermittently renders its empty
+  // state instead of the tag list — but only in a full parallel run: it passes
+  // in isolation, passes paired with reports.spec.ts, passes serially, and the
+  // fixture is provably intact each time (all five seeded tags still present).
+  // Raising the expect timeout to 30s did NOT help, so it is not slowness.
+  // The shared resource is the single Nuxt dev server both contexts compile
+  // against, not the app or the database — real users get their own client and
+  // cache. Serial costs about a minute (5.3m vs 4.3m) and is deterministic.
+  workers: 1,
   use: {
     baseURL: BASE,
     // `page.route` does not intercept service-worker-initiated requests, and a
