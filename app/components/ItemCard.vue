@@ -23,7 +23,7 @@ function onToggle(value: boolean | 'indeterminate') {
 </script>
 
 <template>
-  <div class="flex items-center gap-3 border p-3">
+  <div data-testid="item-row" class="flex items-center gap-3 border p-3">
     <UCheckbox
       v-if="selectable"
       :model-value="selected"

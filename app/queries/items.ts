@@ -157,6 +157,9 @@ export function useMoveItems() {
         throw new Error(`Moved ${ids.length - failures.length} of ${ids.length}. ${failures[0]}`)
       }
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: keys.items.all })
+    // onSettled, not onSuccess: a partial move still moved something, and
+    // leaving the stale list on screen invites the user to re-move items that
+    // already moved.
+    onSettled: () => queryClient.invalidateQueries({ queryKey: keys.items.all })
   })
 }

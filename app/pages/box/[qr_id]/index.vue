@@ -71,18 +71,24 @@ async function toggleArchive() {
   }
 }
 
-// Delete
+// Delete. `storage_items.box` is required with cascadeDelete false, so the
+// API answers 400 for a box that still holds items — disable the control and
+// say why rather than surfacing that as database jargon.
+const deleteOpen = ref(false)
 const { mutateAsync: deleteBox, isPending: deletePending } = useDeleteBox()
 const deleteError = ref('')
+const hasItems = computed(() => !itemsPending.value && itemsTotal.value > 0)
 async function onDelete() {
   const current = box.value
   if (!current) return
   deleteError.value = ''
   try {
     await deleteBox(current.id)
+    deleteOpen.value = false
     await navigateTo('/')
   } catch (e) {
     deleteError.value = pbError(e)
+    deleteOpen.value = false
   }
 }
 
@@ -114,6 +120,11 @@ function exitSelectMode() {
   selectMode.value = false
   selectedIds.value = []
 }
+// A selection that survives a page change is invisible, and lets someone move
+// items they can no longer see.
+watch(itemPage, () => {
+  selectedIds.value = []
+})
 
 const moveOpen = ref(false)
 const moveTargetId = ref('')
@@ -171,13 +182,21 @@ async function onMove() {
           >
             {{ box.status === 'archived' ? 'Unarchive' : 'Archive' }}
           </UButton>
-          <UButton v-if="canDelete" data-testid="delete-box" :loading="deletePending" @click="onDelete">
+          <UButton
+            v-if="canDelete"
+            data-testid="delete-box"
+            :loading="deletePending"
+            :disabled="itemsPending || hasItems"
+            @click="deleteOpen = true"
+          >
             Delete
           </UButton>
           <UButton :to="`/box/${qrId}/print`">Print label</UButton>
           <UButton :to="`/box/${qrId}/share`">Share</UButton>
         </div>
       </div>
+
+      <p v-if="canDelete && hasItems">Empty this box before deleting it.</p>
 
       <UAlert v-if="archiveError" :description="archiveError" />
       <UAlert v-if="deleteError" :description="deleteError" />
@@ -186,9 +205,11 @@ async function onMove() {
 
       <div v-if="galleryUrls.length > 0" class="flex flex-wrap gap-2">
         <img
-          v-for="url in galleryUrls"
+          v-for="(url, index) in galleryUrls"
           :key="url"
+          data-testid="box-gallery-image"
           :src="url"
+          :alt="`${box.title || box.qr_id}, photo ${index + 1}`"
           class="h-24 w-24 object-cover"
         >
       </div>
@@ -252,6 +273,22 @@ async function onMove() {
       <UModal v-model:open="addItemOpen" title="Add item">
         <template #body>
           <ItemForm :pending="createItemPending" :error="createItemError" @submit="onCreateItem" />
+        </template>
+      </UModal>
+
+      <UModal v-model:open="deleteOpen" title="Delete box">
+        <template #body>
+          <div data-testid="delete-box-confirm" class="flex flex-col gap-4">
+            <p>Delete "{{ box.title || box.qr_id }}"? This cannot be undone.</p>
+            <div class="flex gap-2">
+              <UButton data-testid="cancel-delete-box" variant="ghost" @click="deleteOpen = false">
+                Cancel
+              </UButton>
+              <UButton data-testid="confirm-delete-box" :loading="deletePending" @click="onDelete">
+                Delete box
+              </UButton>
+            </div>
+          </div>
         </template>
       </UModal>
 
