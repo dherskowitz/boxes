@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ClientResponseError } from 'pocketbase'
+import type { FormError } from '@nuxt/ui'
 import type { StorageBoxPermission } from '~/types/pocketbase'
 
 const route = useRoute()
@@ -45,17 +46,22 @@ function nameFor(id: string): string {
 
 const grantable = useGrantableUsers(box)
 const grantableOptions = computed(() => grantable.value.map(u => ({ label: u.name, value: u.id })))
-const selectedUserId = ref('')
+const grant = reactive({ userId: '' })
+
+function validateGrant(): FormError[] {
+  if (!grant.userId) return [{ name: 'userId', message: 'Choose a member to grant editor access to.' }]
+  return []
+}
 
 const { mutateAsync: grantEditor, isPending: grantPending } = useGrantEditor()
 const grantError = ref('')
 async function onGrant() {
   const current = box.value
-  if (!current || !selectedUserId.value) return
+  if (!current) return
   grantError.value = ''
   try {
-    await grantEditor({ boxId: current.id, userId: selectedUserId.value })
-    selectedUserId.value = ''
+    await grantEditor({ boxId: current.id, userId: grant.userId })
+    grant.userId = ''
   } catch (e) {
     grantError.value = pbError(e)
   }
@@ -91,7 +97,7 @@ async function onRevoke(permission: StorageBoxPermission) {
       <UButton to="/">Back to boxes</UButton>
     </div>
 
-    <UAlert v-else-if="boxIsError" :description="boxErrorMessage" />
+    <UAlert v-else-if="boxIsError" color="error" :description="boxErrorMessage" />
 
     <div v-else-if="box" class="flex flex-col gap-4">
       <div class="flex flex-wrap items-center justify-between gap-3">
@@ -109,7 +115,7 @@ async function onRevoke(permission: StorageBoxPermission) {
         </div>
 
         <div v-else-if="permissionsIsError" class="flex flex-col items-start gap-3">
-          <UAlert title="Could not load editors" :description="permissionsErrorMessage" />
+          <UAlert color="error" title="Could not load editors" :description="permissionsErrorMessage" />
           <UButton data-testid="share-editors-retry" @click="refetchPermissions()">Try again</UButton>
         </div>
 
@@ -137,33 +143,33 @@ async function onRevoke(permission: StorageBoxPermission) {
             </li>
           </ul>
 
-          <UAlert v-if="revokeError" :description="revokeError" />
+          <UAlert v-if="revokeError" color="error" :description="revokeError" />
         </template>
 
-        <div class="flex flex-wrap items-end gap-2">
-          <UFormField label="Grant editor" class="min-w-40 flex-1">
+        <UForm
+          :state="grant"
+          :validate="validateGrant"
+          class="flex flex-wrap items-end gap-2"
+          @submit="onGrant"
+        >
+          <UFormField label="Grant editor" name="userId" class="min-w-40 flex-1">
             <USelect
-              v-model="selectedUserId"
+              v-model="grant.userId"
               data-testid="grantable-users"
               :items="grantableOptions"
               placeholder="Choose a member"
             />
           </UFormField>
-          <UButton
-            data-testid="grant-editor"
-            :loading="grantPending"
-            :disabled="!selectedUserId"
-            @click="onGrant"
-          >
+          <UButton type="submit" data-testid="grant-editor" :loading="grantPending">
             Grant
           </UButton>
-        </div>
+        </UForm>
 
         <p v-if="!permissionsPending && !directoryPending && grantableOptions.length === 0">
           Every member already has access.
         </p>
 
-        <UAlert v-if="grantError" :description="grantError" />
+        <UAlert v-if="grantError" color="error" :description="grantError" />
       </div>
     </div>
   </div>

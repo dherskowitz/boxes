@@ -1,5 +1,12 @@
 <script setup lang="ts">
+import type { FormError } from '@nuxt/ui'
 import type { StorageComment } from '~/types/pocketbase'
+
+/** Shared by the new-comment form and the edit form. */
+function validateText(text: string): FormError[] {
+  if (text.trim() === '') return [{ name: 'text', message: 'Write something before saving.' }]
+  return []
+}
 
 const props = defineProps<{ itemId: string }>()
 
@@ -28,15 +35,14 @@ function formatTimestamp(iso: string): string {
 }
 
 // New comment
-const newText = ref('')
+const newComment = reactive({ text: '' })
 const createError = ref('')
 const { mutateAsync: createComment, isPending: createPending } = useCreateComment()
 async function onSubmit() {
-  if (newText.value.trim() === '') return
   createError.value = ''
   try {
-    await createComment({ itemId: props.itemId, text: newText.value })
-    newText.value = ''
+    await createComment({ itemId: props.itemId, text: newComment.text })
+    newComment.text = ''
   } catch (e) {
     createError.value = pbError(e)
   }
@@ -44,22 +50,22 @@ async function onSubmit() {
 
 // Edit
 const editingComment = ref<StorageComment | null>(null)
-const editText = ref('')
+const editComment = reactive({ text: '' })
 const editOpen = ref(false)
 const editError = ref('')
 const { mutateAsync: updateComment, isPending: updatePending } = useUpdateComment()
 function startEdit(comment: StorageComment) {
   editingComment.value = comment
-  editText.value = comment.text
+  editComment.text = comment.text
   editError.value = ''
   editOpen.value = true
 }
 async function saveEdit() {
   const existing = editingComment.value
-  if (!existing || editText.value.trim() === '') return
+  if (!existing) return
   editError.value = ''
   try {
-    await updateComment({ existing, text: editText.value })
+    await updateComment({ existing, text: editComment.text })
     editOpen.value = false
   } catch (e) {
     editError.value = pbError(e)
@@ -101,7 +107,7 @@ async function confirmDelete() {
       <USkeleton class="h-12 w-full" />
     </div>
 
-    <UAlert v-else-if="isError" data-testid="comment-thread-error" :description="errorMessage" />
+    <UAlert v-else-if="isError" color="error" data-testid="comment-thread-error" :description="errorMessage" />
 
     <template v-else>
       <div v-if="comments.length === 0" data-testid="comment-thread-empty">
@@ -123,43 +129,53 @@ async function confirmDelete() {
       </ul>
     </template>
 
-    <UAlert v-if="createError" data-testid="comment-form-error" :description="createError" />
-    <form class="flex flex-col gap-2" @submit.prevent="onSubmit">
-      <UTextarea
-        v-model="newText"
-        data-testid="comment-input"
-        placeholder="Add a comment"
-        class="w-full"
-      />
+    <UAlert v-if="createError" color="error" data-testid="comment-form-error" :description="createError" />
+    <UForm
+      :state="newComment"
+      :validate="() => validateText(newComment.text)"
+      class="flex flex-col gap-2"
+      @submit="onSubmit"
+    >
+      <UFormField name="text">
+        <UTextarea
+          v-model="newComment.text"
+          data-testid="comment-input"
+          placeholder="Add a comment"
+          class="w-full"
+        />
+      </UFormField>
       <UButton
         type="submit"
         data-testid="comment-submit"
         :loading="createPending"
-        :disabled="createPending || newText.trim() === ''"
+        :disabled="createPending"
       >
         Post comment
       </UButton>
-    </form>
+    </UForm>
 
     <UModal v-model:open="editOpen" title="Edit comment">
       <template #body>
-        <div data-testid="comment-edit-form" class="flex flex-col gap-4">
-          <UTextarea v-model="editText" data-testid="comment-edit-input" class="w-full" />
-          <UAlert v-if="editError" :description="editError" />
+        <UForm
+          :state="editComment"
+          :validate="() => validateText(editComment.text)"
+          data-testid="comment-edit-form"
+          class="flex flex-col gap-4"
+          @submit="saveEdit"
+        >
+          <UFormField name="text">
+            <UTextarea v-model="editComment.text" data-testid="comment-edit-input" class="w-full" />
+          </UFormField>
+          <UAlert v-if="editError" color="error" :description="editError" />
           <div class="flex gap-2">
             <UButton data-testid="comment-cancel-edit" variant="ghost" @click="editOpen = false">
               Cancel
             </UButton>
-            <UButton
-              data-testid="comment-save-edit"
-              :loading="updatePending"
-              :disabled="editText.trim() === ''"
-              @click="saveEdit"
-            >
+            <UButton type="submit" data-testid="comment-save-edit" :loading="updatePending">
               Save
             </UButton>
           </div>
-        </div>
+        </UForm>
       </template>
     </UModal>
 
@@ -167,7 +183,7 @@ async function confirmDelete() {
       <template #body>
         <div data-testid="comment-delete-confirm" class="flex flex-col gap-4">
           <p>Delete this comment? This cannot be undone.</p>
-          <UAlert v-if="deleteError" :description="deleteError" />
+          <UAlert v-if="deleteError" color="error" :description="deleteError" />
           <div class="flex gap-2">
             <UButton data-testid="comment-cancel-delete" variant="ghost" @click="deleteOpen = false">
               Cancel

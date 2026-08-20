@@ -51,6 +51,7 @@ async function onSignOut() {
         class="flex flex-col items-start gap-3"
       >
         <UAlert
+          color="error"
           title="Could not check your access"
           :description="membershipErrorMessage"
         />
@@ -59,6 +60,7 @@ async function onSignOut() {
 
       <UAlert
         v-else-if="!isMember"
+        color="error"
         data-testid="access-denied"
         title="No access to this app"
         description="Your account is not an enabled member of Storage Boxes. Ask an admin to grant you access."

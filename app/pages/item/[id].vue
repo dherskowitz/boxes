@@ -69,7 +69,7 @@ async function onDelete() {
       <UButton to="/">Back to boxes</UButton>
     </div>
 
-    <UAlert v-else-if="isError" :description="errorMessage" />
+    <UAlert v-else-if="isError" color="error" :description="errorMessage" />
 
     <div v-else-if="item" class="flex flex-col gap-6">
       <div class="flex flex-wrap items-start justify-between gap-3">
@@ -87,7 +87,7 @@ async function onDelete() {
         </div>
       </div>
 
-      <UAlert v-if="deleteError" :description="deleteError" />
+      <UAlert v-if="deleteError" color="error" :description="deleteError" />
 
       <p v-if="item.description">{{ item.description }}</p>
       <p v-if="item.notes">{{ item.notes }}</p>

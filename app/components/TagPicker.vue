@@ -95,6 +95,7 @@ async function onCreate(raw: string) {
 
     <UAlert
       v-if="errorMessage"
+      color="error"
       data-testid="tag-picker-error"
       :description="errorMessage"
     />

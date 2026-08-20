@@ -31,7 +31,7 @@ function toggle(id: string) {
 
   <!-- Without this, a failed fetch leaves `tags` undefined and falls through
        to the empty branch — telling the user there is no tag vocabulary. -->
-  <UAlert v-else-if="isError" title="Could not load tags" :description="errorMessage" />
+  <UAlert v-else-if="isError" color="error" title="Could not load tags" :description="errorMessage" />
 
   <!-- Nothing to filter by until the shared vocabulary has a tag in it, and an
        empty row of chips is only dead space on a phone. -->

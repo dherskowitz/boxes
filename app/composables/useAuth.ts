@@ -1,5 +1,8 @@
 import type { AppUser } from '~/types/pocketbase'
 
+const NO_APP_ACCESS
+  = 'Your account is not an enabled member of Storage Boxes. Ask an admin to grant you access.'
+
 /**
  * Match the authed user against the member directory.
  *
@@ -28,7 +31,20 @@ export function useAuthUser() {
   const isLoggedIn = computed(() => userId.value !== '')
 
   async function login(email: string, password: string) {
-    await $pb.collection('users').authWithPassword(email, password)
+    const { record } = await $pb.collection('users').authWithPassword(email, password)
+    try {
+      // Read straight from PocketBase, NOT through nuxt-query like every other
+      // read in this app. This gate decides whether a session exists at all, so
+      // a cached directory is exactly what would let a user whose membership was
+      // revoked back in — and there is nothing useful to answer offline either.
+      // Do not "fix" this back through useAppUsers().
+      const directory = await $pb.collection('storage_app_users').getFullList<AppUser>()
+      if (!deriveMembership(record.id, directory)) throw new Error(NO_APP_ACCESS)
+    } catch (e) {
+      // Fail closed: an unverifiable membership leaves no session behind.
+      $pb.authStore.clear()
+      throw e
+    }
   }
 
   function logout() {

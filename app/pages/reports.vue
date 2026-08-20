@@ -57,6 +57,7 @@ function retry() {
 
     <UAlert
       v-if="!isOnline"
+      color="warning"
       data-testid="reports-offline"
       title="You're offline"
       description="Reports need a live connection. Reconnect to see current figures — showing stale numbers here would be misleading."
@@ -67,7 +68,7 @@ function retry() {
     </div>
 
     <div v-else-if="isError" data-testid="reports-error" class="flex flex-col items-start gap-3">
-      <UAlert title="Could not load reports" :description="errorMessage" />
+      <UAlert color="error" title="Could not load reports" :description="errorMessage" />
       <UButton data-testid="reports-retry" @click="retry">Try again</UButton>
     </div>
 

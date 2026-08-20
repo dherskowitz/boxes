@@ -25,6 +25,7 @@ function printLabel() {
 
     <UAlert
       v-else-if="isError"
+      color="error"
       data-testid="box-not-found"
       title="Box not found"
       description="No box matches this code."

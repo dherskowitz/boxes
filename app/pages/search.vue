@@ -72,7 +72,7 @@ const errorMessage = computed(() => (error.value ? pbError(error.value) : ''))
       <USkeleton v-for="n in 4" :key="n" class="h-16 w-full" />
     </div>
 
-    <UAlert v-else-if="isError" :description="errorMessage" />
+    <UAlert v-else-if="isError" color="error" :description="errorMessage" />
 
     <!-- A term that matches nothing and a term narrowed away by the tag
          filter need different advice: the second is fixed by clearing a tag,

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import type { FormError } from '@nuxt/ui'
 import type { StorageTag } from '~/types/pocketbase'
 
 const { data: tags, isPending, isError, error, refetch } = useTags()
@@ -15,13 +16,21 @@ function usageFor(tagId: string) {
 }
 
 const editingId = ref('')
-const editName = ref('')
+const rename = reactive({ name: '' })
 const renameError = ref('')
 
 function startRename(tag: StorageTag) {
   editingId.value = tag.id
-  editName.value = tag.name
+  rename.name = tag.name
   renameError.value = ''
+}
+
+function validateRename(): FormError[] {
+  // Normalised, not raw: '   ' and '' are the same empty name to the API.
+  if (!normalizeTagName(rename.name)) {
+    return [{ name: 'name', message: 'Tag name cannot be empty.' }]
+  }
+  return []
 }
 
 function cancelRename() {
@@ -30,11 +39,7 @@ function cancelRename() {
 
 async function saveRename(tag: StorageTag) {
   renameError.value = ''
-  const name = normalizeTagName(editName.value)
-  if (!name) {
-    renameError.value = 'Tag name cannot be empty.'
-    return
-  }
+  const name = normalizeTagName(rename.name)
   try {
     await renameTag.mutateAsync({ id: tag.id, name })
     editingId.value = ''
@@ -77,7 +82,7 @@ async function performDelete() {
     </div>
 
     <div v-else-if="isError" class="flex flex-col items-start gap-3">
-      <UAlert title="Could not load tags" :description="pbError(error)" />
+      <UAlert color="error" title="Could not load tags" :description="pbError(error)" />
       <UButton data-testid="tags-retry" @click="refetch()">Try again</UButton>
     </div>
 
@@ -92,15 +97,21 @@ async function performDelete() {
           :style="tag.color ? { backgroundColor: tag.color } : undefined"
         />
 
-        <template v-if="editingId === tag.id">
-          <UFormField label="Name" class="min-w-40 flex-1">
-            <UInput v-model="editName" class="w-full" />
+        <UForm
+          v-if="editingId === tag.id"
+          :state="rename"
+          :validate="validateRename"
+          class="flex min-w-40 flex-1 flex-wrap items-end gap-3"
+          @submit="saveRename(tag)"
+        >
+          <UFormField label="Name" name="name" class="min-w-40 flex-1">
+            <UInput v-model="rename.name" class="w-full" />
           </UFormField>
-          <UButton :loading="renameTag.isPending.value" @click="saveRename(tag)">
+          <UButton type="submit" :loading="renameTag.isPending.value">
             Save
           </UButton>
           <UButton variant="ghost" @click="cancelRename">Cancel</UButton>
-        </template>
+        </UForm>
 
         <template v-else>
           <span class="min-w-0 flex-1">{{ tag.name }}</span>
@@ -126,7 +137,7 @@ async function performDelete() {
       </li>
     </ul>
 
-    <UAlert v-if="renameError" :description="renameError" />
+    <UAlert v-if="renameError" color="error" :description="renameError" />
 
     <UModal
       v-model:open="deleteOpen"
@@ -138,7 +149,7 @@ async function performDelete() {
       "
     >
       <template #footer>
-        <UAlert v-if="deleteError" :description="deleteError" />
+        <UAlert v-if="deleteError" color="error" :description="deleteError" />
         <div class="flex justify-end gap-2">
           <UButton variant="ghost" @click="deleteTarget = null">Cancel</UButton>
           <UButton :loading="deleteTag.isPending.value" @click="performDelete">
