@@ -107,6 +107,7 @@ pnpm test:e2e    # playwright, boots and stops its own dev server
 - The URL comes from `runtimeConfig.public.pocketbaseUrl` (`NUXT_PUBLIC_POCKETBASE_URL`). Never hardcode a URL or commit credentials.
 - **All reads and writes go through nuxt-query** (`useQuery` / `useMutation`). Never call `pb.collection().getList()` directly from a component — bypassing the query cache breaks offline reads.
 - **Client-side permission checks are UX only.** Hiding an Edit button is not access control; the API rules are the real guard. Never assume a check in the UI makes an operation safe.
+- In a query's `enabled` gate, `''` and `undefined` are not interchangeable. Box detail passes `''` while its box loads and must not query; `/items` passes no `boxId` at all and must. Gate on `!== ''`, never on truthiness — both are falsy and mean opposite things.
 - **Always set the ownership field on create.** `created_by` on boxes, items and voice notes, `user` on comments — all must equal the authed user id. The create rules compare `@request.body.<field> = @request.auth.id`, and an omitted field resolves to empty and fails.
 - **Never include an ownership field in an update.** The update rules use `:isset = false`, which rejects the payload if `created_by` / `user` is present *at all* — even set to the correct value. Send only changed fields; never spread a fetched record into `update()`.
 - Paginate every list. Use `perPage` and `expand` for relations — never fetch all records to filter or join them client-side.
