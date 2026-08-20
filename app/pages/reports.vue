@@ -1,20 +1,7 @@
 <script setup lang="ts">
 import { reportTotals } from '~/queries/reports'
 
-// TODO(slice D): swap for `useOnline()` once it lands — this is the fallback
-// named in the slice J plan, not a second online-detection mechanism to keep.
-const isOnline = ref(navigator.onLine)
-function updateOnlineStatus() {
-  isOnline.value = navigator.onLine
-}
-onMounted(() => {
-  window.addEventListener('online', updateOnlineStatus)
-  window.addEventListener('offline', updateOnlineStatus)
-})
-onUnmounted(() => {
-  window.removeEventListener('online', updateOnlineStatus)
-  window.removeEventListener('offline', updateOnlineStatus)
-})
+const { isOnline } = useOnline()
 
 const {
   data: boxFill,
@@ -44,6 +31,17 @@ const errorMessage = computed(() => pbError(boxFillError.value ?? tagUsageError.
 
 const totals = computed(() => reportTotals(boxFill.value, tagUsage.value))
 
+// PRD §7.10 (amended in v1.2): offline the figures are served from cache and
+// carry a warning rather than being replaced by a needs-connection wall — the
+// service worker already caches the `storage_report_*` views. The notice is
+// deliberately conditional on the queries actually holding data: offline with
+// nothing cached there is nothing stale to warn about, so the loading or error
+// state stands on its own. A notice that is always there is one people stop
+// reading.
+const hasCachedFigures = computed(
+  () => boxFill.value !== undefined && tagUsage.value !== undefined && growth.value !== undefined
+)
+
 function retry() {
   refetchBoxFill()
   refetchTagUsage()
@@ -56,14 +54,14 @@ function retry() {
     <h1 class="text-xl font-semibold">Reports</h1>
 
     <UAlert
-      v-if="!isOnline"
+      v-if="!isOnline && hasCachedFigures"
       color="warning"
-      data-testid="reports-offline"
-      title="You're offline"
-      description="Reports need a live connection. Reconnect to see current figures — showing stale numbers here would be misleading."
+      data-testid="reports-stale"
+      title="These figures may be out of date"
+      description="You're offline, so these are the numbers this device last loaded. Partial or stale aggregates can mislead — reconnect for the current picture."
     />
 
-    <div v-else-if="isPending" data-testid="reports-loading" class="grid grid-cols-2 gap-3 sm:grid-cols-4">
+    <div v-if="isPending" data-testid="reports-loading" class="grid grid-cols-2 gap-3 sm:grid-cols-4">
       <USkeleton v-for="n in 4" :key="n" class="h-20 w-full" />
     </div>
 

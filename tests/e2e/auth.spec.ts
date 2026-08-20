@@ -37,7 +37,9 @@ test.describe('unauthenticated', () => {
   // Every route in PRD section 9 except /login itself. The guard is global
   // middleware, so this is really asserting no page opts out of it.
   const PROTECTED = [
+    // '/' is the dashboard, '/boxes' the box index — both are guarded routes.
     '/',
+    '/boxes',
     '/box/new',
     '/box/seedbox1',
     '/box/seedbox1/print',
@@ -93,6 +95,8 @@ test.describe('signed in as a member', () => {
   test.use({ storageState: 'tests/e2e/.auth/rae.json' })
 
   test('reaches the app shell rather than the access-denied state', async ({ page }) => {
+    // Stays on '/': this is about landing somewhere authenticated with the app
+    // shell around it, not about the box index — which now lives at /boxes.
     await page.goto('/')
     await expect(page.getByTestId('access-denied')).toBeHidden()
     // exact: true — the header logo link's accessible name is "Storage Boxes",
@@ -128,7 +132,8 @@ test.describe('an account without app membership', () => {
     )
     expect(stored).toEqual([])
 
-    // And no app page is reachable with what is left.
+    // And no app page is reachable with what is left. Stays on '/': the point
+    // is the app's default destination, not the box index.
     await page.goto('/')
     await expect(page).toHaveURL(/\/login\?redirect=/)
   })
@@ -141,6 +146,8 @@ test.describe('signed in with a failing directory request', () => {
     await page.route('**/api/collections/storage_app_users/records**', route =>
       route.abort('failed')
     )
+    // Stays on '/': the membership gate lives in the layout, so any authed
+    // route exercises it — the landing page is the one a user actually hits.
     await page.goto('/')
     // the directory query retries with backoff before settling into an error
     await expect(page.getByTestId('membership-error')).toBeVisible({ timeout: 30_000 })

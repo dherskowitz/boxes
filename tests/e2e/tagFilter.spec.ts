@@ -27,7 +27,7 @@ test('filters the box index down to boxes carrying the selected tag', async ({ p
   const untagged = await createBox(pb, { title: 'Hallway shoe rack spares' })
   throwaway.push(tagged.id, untagged.id)
 
-  await page.goto('/')
+  await page.goto('/boxes')
   await expect(page.getByText(untagged.title)).toBeVisible()
 
   await page.getByTestId(`tag-filter-${SHELVING}`).click()
@@ -45,7 +45,7 @@ test('AND-matches when two tags are selected, rather than widening the list', as
   const one = await createBox(pb, { title: 'Bike helmets and puncture kit', tags: [shelvingId] })
   throwaway.push(both.id, one.id)
 
-  await page.goto('/')
+  await page.goto('/boxes')
   await page.getByTestId(`tag-filter-${SHELVING}`).click()
   await expect(page.getByText(one.title)).toBeVisible()
 
@@ -60,7 +60,7 @@ test('clearing the tag filter restores the full list', async ({ page }) => {
   const tagged = await createBox(pb, { title: 'Paint tins and rollers', tags: [shelvingId] })
   throwaway.push(tagged.id)
 
-  await page.goto('/')
+  await page.goto('/boxes')
   await page.getByTestId(`tag-filter-${SHELVING}`).click()
   await expect(page.getByText('Winter coats and boots')).toBeHidden()
 
@@ -73,7 +73,7 @@ test('a filter that matches nothing reads differently from having no boxes at al
   const pb = await authedPb()
   await createTag(pb, UNUSED)
 
-  await page.goto('/')
+  await page.goto('/boxes')
   await page.getByTestId(`tag-filter-${UNUSED}`).click()
   await expect(page.getByTestId('box-list-no-matches-active')).toBeVisible()
   // "no boxes yet" would invite the user to create their first box, which is
@@ -91,7 +91,7 @@ test('the archived section honours the tag filter alongside the toggle', async (
   })
   throwaway.push(archived.id)
 
-  await page.goto('/')
+  await page.goto('/boxes')
   await page.getByTestId('show-archived').click()
   await page.getByTestId(`tag-filter-${SEASONAL}`).click()
 

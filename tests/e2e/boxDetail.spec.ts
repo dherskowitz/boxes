@@ -62,7 +62,7 @@ test.describe('as the box creator', () => {
     await page.getByTestId('archive-box').click()
     await expect(page.getByTestId('archive-box')).toHaveText('Unarchive')
 
-    await page.goto('/')
+    await page.goto('/boxes')
     await expect(page.getByTestId('box-section-active').getByText(box.title)).toBeHidden()
     await page.getByTestId('show-archived').click()
     await expect(page.getByTestId('box-section-archived').getByText(box.title)).toBeVisible()
@@ -71,7 +71,7 @@ test.describe('as the box creator', () => {
     await page.getByTestId('archive-box').click()
     await expect(page.getByTestId('archive-box')).toHaveText('Archive')
 
-    await page.goto('/')
+    await page.goto('/boxes')
     await expect(page.getByTestId('box-section-active').getByText(box.title)).toBeVisible()
   })
 
@@ -101,7 +101,7 @@ test.describe('as the box creator', () => {
 
     await page.getByTestId('delete-box').click()
     await page.getByTestId('confirm-delete-box').click()
-    await expect(page).toHaveURL('/')
+    await expect(page).toHaveURL('/boxes')
     await expect(page.getByText(box.title)).toBeHidden()
   })
 
