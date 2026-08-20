@@ -158,9 +158,12 @@ test.describe('as another member', () => {
     const matches = await pb.collection('storage_comments').getList<TestComment>(1, 10, {
       filter: pb.filter('item = {:itemId} && text = {:text}', { itemId, text })
     })
+    // Registered for cleanup before the assertion, not after: if the guard
+    // ever regresses and two comments post, the assertion throws, and
+    // anything registered below it would never be cleaned up — leaving the
+    // extras on the seeded peacoat for every later run.
+    for (const match of matches.items) cleanup.push(pb, match.id)
     expect(matches.items).toHaveLength(1)
-    const [created] = matches.items
-    if (created) cleanup.push(pb, created.id)
   })
 
   test('cannot update or delete someone else\'s comment through the API either', async () => {
@@ -177,14 +180,14 @@ test.describe('as another member', () => {
 
     // 404, not 403: PocketBase applies updateRule/deleteRule as a filter on the
     // record lookup, so a comment that fails `user = @request.auth.id` is
-    // simply not found for that operation. What matters is that the write is
-    // refused and the comment is untouched, so assert that rather than a code.
+    // simply not found for that operation. That is deterministic here, so the
+    // test states it — and still asserts the comment itself is untouched.
     await expect(
       pb.collection('storage_comments').update(samComment.id, { text: 'Hijacked' })
-    ).rejects.toThrow(ClientResponseError)
+    ).rejects.toMatchObject({ status: 404 })
     await expect(
       pb.collection('storage_comments').delete(samComment.id)
-    ).rejects.toThrow(ClientResponseError)
+    ).rejects.toMatchObject({ status: 404 })
 
     const after = await pb.collection('storage_comments').getOne<TestComment>(samComment.id)
     expect(after.text).toBe('Is this the one with the missing button?')
