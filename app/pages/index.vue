@@ -29,11 +29,10 @@ const figuresErrorMessage = computed(() => pbError(boxFillError.value ?? tagUsag
 
 const totals = computed(() => reportTotals(boxFill.value, tagUsage.value))
 
-// Items per box, top 5. Chosen over growth because it is the most actionable
-// of the five: it answers "which boxes are crowded". Pre-sliced here rather
-// than by a prop on ReportItemsPerBox — the component applies the same helper
-// again, which is idempotent, and /reports keeps its top 10 untouched.
-const topBoxes = computed(() => topBoxesByItems(boxFill.value, 5))
+// No chart here. The dashboard's job is "how much is there, and what did I
+// touch last" — a ranked bar chart of items per box is a reporting question,
+// and /reports already answers it without making this screen pull in
+// nuxt-charts on a cold load.
 
 // PRD §7.10 as amended in v1.2: offline the aggregates come from cache and say
 // so, rather than being replaced by a needs-connection wall. Conditional on the
@@ -72,76 +71,99 @@ function onSearchSubmit() {
 </script>
 
 <template>
-  <div class="flex flex-col gap-6">
-    <div class="flex flex-wrap items-center justify-between gap-3">
-      <h1 class="text-lg font-medium">Dashboard</h1>
-      <div class="flex items-center gap-3">
-        <NuxtLink to="/print-sheet">Print sheet</NuxtLink>
-        <UButton to="/box/new">New box</UButton>
-      </div>
+  <div>
+    <AppHeader eyebrow="Storage Boxes" title="Dashboard">
+      <SearchBar v-model="searchTerm" @submit="onSearchSubmit" />
+    </AppHeader>
+
+    <div class="sb-body flex flex-col gap-6">
+      <section class="flex flex-col gap-3">
+        <UAlert
+          v-if="!isOnline && hasCachedFigures"
+          color="warning"
+          data-testid="dashboard-stale"
+          title="These figures may be out of date"
+          description="You're offline, so these are the numbers this device last loaded. Partial or stale aggregates can mislead — reconnect for the current picture."
+        />
+
+        <div
+          v-if="isFiguresPending"
+          data-testid="dashboard-loading"
+          class="grid grid-cols-2 gap-3 sm:grid-cols-4"
+        >
+          <USkeleton v-for="n in 4" :key="n" class="h-20 w-full rounded-[1.25rem]" />
+        </div>
+
+        <div v-else-if="isFiguresError" data-testid="dashboard-error" class="flex flex-col items-start gap-3">
+          <UAlert color="error" title="Could not load your figures" :description="figuresErrorMessage" />
+          <UButton data-testid="dashboard-retry" @click="retryFigures">Try again</UButton>
+        </div>
+
+        <!-- Linked: each figure is the count of something with a screen that
+             lists it, so the number is the way in rather than a dead end. -->
+        <ReportTotals v-else :totals="totals" linked />
+
+        <UButton
+          to="/reports"
+          data-testid="dashboard-reports-link"
+          block
+          size="xl"
+          color="neutral"
+          variant="outline"
+          class="justify-center rounded-[1.25rem] font-extrabold"
+          icon="i-lucide-chart-column"
+        >
+          Full reports
+        </UButton>
+      </section>
+
+      <!-- Outside the staleness notice on purpose: a cached box list is the
+           offline read v1 already promises and needs no apology. -->
+      <section data-testid="recent-boxes" class="flex flex-col gap-3">
+        <h2 class="sb-mono" :style="{ color: 'var(--sb-muted)' }">Recent boxes</h2>
+
+        <div
+          v-if="isBoxesPending"
+          data-testid="recent-boxes-loading"
+          class="flex flex-col gap-[11px]"
+        >
+          <USkeleton v-for="n in 4" :key="n" class="h-[108px] w-full rounded-[1.25rem]" />
+        </div>
+
+        <UAlert v-else-if="isBoxesError" color="error" :description="boxesErrorMessage" />
+
+        <div
+          v-else-if="recentBoxes.length === 0"
+          data-testid="recent-boxes-empty"
+          class="flex flex-col items-center gap-4 px-2 py-8 text-center"
+        >
+          <div
+            class="flex size-24 items-center justify-center rounded-[2rem] text-white"
+            :style="{ background: 'var(--sb-accent)' }"
+          >
+            <UIcon name="i-lucide-package-open" class="size-11" aria-hidden="true" />
+          </div>
+          <p class="text-sm" :style="{ color: 'var(--sb-muted)' }">No boxes yet.</p>
+          <UButton to="/box/new" size="xl" block icon="i-lucide-plus">Create your first box</UButton>
+        </div>
+
+        <div v-else class="flex flex-col gap-[11px]">
+          <BoxCard v-for="box in recentBoxes" :key="box.id" :box="box" />
+        </div>
+
+        <UButton
+          to="/boxes"
+          data-testid="dashboard-boxes-link"
+          block
+          size="xl"
+          color="neutral"
+          variant="outline"
+          class="justify-center rounded-[1.25rem] font-extrabold"
+          icon="i-lucide-boxes"
+        >
+          All boxes
+        </UButton>
+      </section>
     </div>
-
-    <SearchBar v-model="searchTerm" @submit="onSearchSubmit" />
-
-    <section class="flex flex-col gap-3">
-      <UAlert
-        v-if="!isOnline && hasCachedFigures"
-        color="warning"
-        data-testid="dashboard-stale"
-        title="These figures may be out of date"
-        description="You're offline, so these are the numbers this device last loaded. Partial or stale aggregates can mislead — reconnect for the current picture."
-      />
-
-      <div
-        v-if="isFiguresPending"
-        data-testid="dashboard-loading"
-        class="grid grid-cols-2 gap-3 sm:grid-cols-4"
-      >
-        <USkeleton v-for="n in 4" :key="n" class="h-20 w-full" />
-      </div>
-
-      <div v-else-if="isFiguresError" data-testid="dashboard-error" class="flex flex-col items-start gap-3">
-        <UAlert color="error" title="Could not load your figures" :description="figuresErrorMessage" />
-        <UButton data-testid="dashboard-retry" @click="retryFigures">Try again</UButton>
-      </div>
-
-      <template v-else>
-        <ReportTotals :totals="totals" />
-        <LazyReportItemsPerBox :box-fill="topBoxes" />
-      </template>
-
-      <NuxtLink to="/reports" data-testid="dashboard-reports-link">Full reports</NuxtLink>
-    </section>
-
-    <!-- Outside the staleness notice on purpose: a cached box list is the
-         offline read v1 already promises and needs no apology. -->
-    <section data-testid="recent-boxes" class="flex flex-col gap-3">
-      <h2 class="font-medium">Recent boxes</h2>
-
-      <div
-        v-if="isBoxesPending"
-        data-testid="recent-boxes-loading"
-        class="grid grid-cols-2 gap-3 sm:grid-cols-3"
-      >
-        <USkeleton v-for="n in 4" :key="n" class="h-40 w-full" />
-      </div>
-
-      <UAlert v-else-if="isBoxesError" color="error" :description="boxesErrorMessage" />
-
-      <div
-        v-else-if="recentBoxes.length === 0"
-        data-testid="recent-boxes-empty"
-        class="flex flex-col items-start gap-3"
-      >
-        <p>No boxes yet.</p>
-        <UButton to="/box/new">Create your first box</UButton>
-      </div>
-
-      <div v-else class="grid grid-cols-2 gap-3 sm:grid-cols-3">
-        <BoxCard v-for="box in recentBoxes" :key="box.id" :box="box" />
-      </div>
-
-      <NuxtLink to="/boxes" data-testid="dashboard-boxes-link">All boxes</NuxtLink>
-    </section>
   </div>
 </template>

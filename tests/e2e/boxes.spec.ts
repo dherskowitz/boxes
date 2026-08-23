@@ -15,7 +15,9 @@ test('lists active boxes and hides archived ones by default', async ({ page }) =
 
 test('adds archived boxes as a second section rather than swapping the list', async ({ page }) => {
   await page.goto('/boxes')
+  await page.getByTestId('open-filters').click()
   await page.getByTestId('show-archived').click()
+  await page.getByTestId('apply-filters').click()
   await expect(page.getByTestId('box-section-archived').getByText('College photo albums')).toBeVisible()
   // PRD §7.2: archived boxes are *included*, not substituted — the active
   // boxes must still be on screen.

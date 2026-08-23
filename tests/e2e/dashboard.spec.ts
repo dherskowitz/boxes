@@ -4,8 +4,11 @@ import type { ReportBoxFill, ReportTagUsage, StorageBox } from '~/types/pocketba
 
 test.use({ storageState: 'tests/e2e/.auth/rae.json' })
 
-// The dashboard pulls in nuxt-charts' Unovis dependency graph for its one
-// chart, exactly as /reports does — the same cold-compile budget applies.
+// The dashboard itself no longer renders a chart — the items-per-box ranking
+// moved to /reports, which is where a reporting question belongs. The budget
+// stays for the assertions that land *on* /reports, which still pulls in
+// nuxt-charts' Unovis dependency graph and can outlast the default timeout on
+// a cold dev server.
 const CHART_TIMEOUT = 90_000
 test.describe.configure({ timeout: 150_000 })
 
@@ -21,7 +24,7 @@ async function recentActiveBoxes(): Promise<StorageBox[]> {
   return page.items
 }
 
-test('shows totals, a chart and recent boxes', async ({ page }) => {
+test('shows totals and recent boxes', async ({ page }) => {
   await page.goto('/')
   await expect(page.getByTestId('total-boxes')).toBeVisible({ timeout: CHART_TIMEOUT })
 
@@ -41,8 +44,6 @@ test('shows totals, a chart and recent boxes', async ({ page }) => {
   await expect(page.getByTestId('total-photos')).toHaveText(
     String(boxFill.reduce((sum, box) => sum + box.photo_count, 0))
   )
-
-  await expect(page.getByTestId('items-per-box-chart')).toBeVisible()
 
   // The block shows six; the seeded fixture holds five boxes, one of them
   // archived. Assert against what the fixture actually has rather than a
@@ -68,13 +69,6 @@ test('links to the full reports screen', async ({ page }) => {
 test('offline, warns the figures are stale but still lists boxes', async ({ page, context }) => {
   await page.goto('/')
   await expect(page.getByTestId('total-boxes')).toBeVisible({ timeout: CHART_TIMEOUT })
-  // Wait for the chart while still online. It is a <LazyReportItemsPerBox>, so
-  // its chunk arrives on its own dynamic import after the tiles paint, and this
-  // spec runs with service workers blocked — flipping offline mid-import would
-  // fail on a race rather than on the offline behaviour being tested. In the
-  // built PWA the chunk is precached by globPatterns; here the online wait is
-  // what stands in for that.
-  await expect(page.getByTestId('items-per-box-chart')).toBeVisible({ timeout: CHART_TIMEOUT })
   const expected = await recentActiveBoxes()
   const first = expected[0]
   expect(first).toBeDefined()
@@ -93,7 +87,6 @@ test('offline, warns the figures are stale but still lists boxes', async ({ page
   // replaced them would be the wall the amendment exists to remove.
   await expect(page.getByTestId('recent-boxes').getByText(first?.title ?? '')).toBeVisible()
   await expect(page.getByTestId('total-boxes')).toBeVisible()
-  await expect(page.getByTestId('items-per-box-chart')).toBeVisible()
 
   // Recent boxes are not covered by the notice — a cached box list is the
   // offline read v1 already promises and needs no apology.
@@ -113,4 +106,15 @@ test('searching from the dashboard lands on the search page with results', async
   await page.getByRole('button', { name: 'Search' }).click()
   await expect(page).toHaveURL(/\/search\?q=Winter(\+|%20)coats/)
   await expect(page.getByTestId('search-result-box').getByText('Winter coats and boots')).toBeVisible()
+})
+
+test('each figure is the way into the screen that lists it', async ({ page }) => {
+  await page.goto('/')
+  await expect(page.getByTestId('total-boxes')).toBeVisible({ timeout: CHART_TIMEOUT })
+  await page.getByTestId('total-items').click()
+  await expect(page).toHaveURL('/items')
+
+  await page.goto('/')
+  await page.getByTestId('total-tags').click()
+  await expect(page).toHaveURL('/tags')
 })

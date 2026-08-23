@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import type { BoxStatus } from '~/types/pocketbase'
 import type { BoxListFilters } from '~/queries/keys'
-import { PER_PAGE } from '~/queries/keys'
 
 // One status per section. PRD §7.2 wants archived boxes *included* alongside
 // the active ones, and BoxListFilters.status only ever selects one status —
@@ -15,36 +14,42 @@ const props = defineProps<{
   tagIds?: string[]
 }>()
 
-const page = ref(1)
 const tagIds = computed(() => props.tagIds ?? [])
-// Narrowing the filter while on page 3 would otherwise land on a page the
-// filtered list no longer has, which reads as "no matches" when there are.
-watch(tagIds, () => { page.value = 1 })
 
+// No page ref: narrowing the filter changes the query key, so the accumulated
+// pages are dropped and the list starts again from the first — which is what
+// you want, and what a page counter had to be reset by hand to achieve.
 const filters = computed<BoxListFilters>(() => ({
   status: props.status,
-  tagIds: tagIds.value,
-  page: page.value
+  tagIds: tagIds.value
 }))
 
-const { data, isPending, isError, error } = useBoxList(filters)
+const {
+  data,
+  isPending,
+  isError,
+  error,
+  fetchNextPage,
+  hasNextPage,
+  isFetchingNextPage
+} = useInfiniteBoxList(filters)
 
-const boxes = computed(() => data.value?.items ?? [])
-const totalItems = computed(() => data.value?.totalItems ?? 0)
-const totalPages = computed(() => data.value?.totalPages ?? 1)
+const boxes = computed(() => (data.value?.pages ?? []).flatMap(page => page.items))
+// From the first page's envelope: every page carries the same total.
+const totalItems = computed(() => data.value?.pages[0]?.totalItems ?? 0)
 const errorMessage = computed(() => (error.value ? pbError(error.value) : ''))
 </script>
 
 <template>
   <section :data-testid="`box-section-${status}`" class="flex flex-col gap-3">
-    <h2 class="font-medium">{{ heading }}</h2>
+    <h2 class="sb-mono" :style="{ color: 'var(--sb-muted)' }">{{ heading }}</h2>
 
     <div
       v-if="isPending"
       :data-testid="`box-list-loading-${status}`"
-      class="grid grid-cols-2 gap-3 sm:grid-cols-3"
+      class="flex flex-col gap-[11px]"
     >
-      <USkeleton v-for="n in 6" :key="n" class="h-40 w-full" />
+      <USkeleton v-for="n in 6" :key="n" class="h-[108px] w-full rounded-[1.25rem]" />
     </div>
 
     <UAlert v-else-if="isError" color="error" :description="errorMessage" />
@@ -62,21 +67,39 @@ const errorMessage = computed(() => (error.value ? pbError(error.value) : ''))
     <div
       v-else-if="boxes.length === 0"
       :data-testid="`box-list-empty-${status}`"
-      class="flex flex-col items-start gap-3"
+      class="flex flex-col items-center gap-5 px-2 py-10 text-center"
     >
-      <p>{{ emptyMessage }}</p>
-      <UButton v-if="status === 'active'" to="/box/new">Create your first box</UButton>
+      <div
+        class="flex size-30 items-center justify-center rounded-[2.25rem] text-white"
+        :style="{ background: 'var(--sb-accent)', boxShadow: '0 18px 36px oklch(0.55 0.21 292 / .35)' }"
+      >
+        <UIcon name="i-lucide-package-open" class="size-14" aria-hidden="true" />
+      </div>
+      <div class="flex flex-col gap-2">
+        <p class="sb-display text-[22px]">
+          {{ status === 'active' ? 'Start with one box' : 'Nothing archived' }}
+        </p>
+        <p class="text-sm" :style="{ color: 'var(--sb-muted)' }">{{ emptyMessage }}</p>
+      </div>
+      <div v-if="status === 'active'" class="flex w-full flex-col gap-2.5">
+        <UButton to="/box/new" size="xl" block icon="i-lucide-plus">Create your first box</UButton>
+        <UButton to="/scan" size="xl" block color="neutral" variant="outline" icon="i-lucide-qr-code">
+          I have a QR label to scan
+        </UButton>
+      </div>
     </div>
 
-    <div v-else class="grid grid-cols-2 gap-3 sm:grid-cols-3">
+    <div v-else class="flex flex-col gap-[11px]">
       <BoxCard v-for="box in boxes" :key="box.id" :box="box" />
     </div>
 
-    <UPagination
-      v-if="totalPages > 1"
-      v-model:page="page"
+    <InfiniteList
+      v-if="boxes.length > 0"
+      :has-more="hasNextPage"
+      :loading="isFetchingNextPage"
       :total="totalItems"
-      :items-per-page="PER_PAGE"
+      noun="boxes"
+      @more="fetchNextPage()"
     />
   </section>
 </template>

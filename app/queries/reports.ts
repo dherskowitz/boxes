@@ -103,3 +103,20 @@ export function useGrowth() {
     queryFn: () => $pb.collection('storage_report_growth').getFullList<ReportGrowth>()
   })
 }
+
+/**
+ * Item count per box, indexed by box id — for the "9 items" chip the v2 design
+ * puts on every box card and hero.
+ *
+ * Built on `useBoxFill()` rather than counting items per card: one cached
+ * request of tens of rows, shared with the dashboard and /reports, instead of
+ * a request per card. Same pattern as `useTagUsageMap()`.
+ */
+export function useBoxItemCounts() {
+  const { data } = useBoxFill()
+  return computed(() => {
+    const map = new Map<string, number>()
+    for (const row of data.value ?? []) map.set(row.id, row.item_count)
+    return map
+  })
+}
