@@ -26,11 +26,18 @@ test('shows which box each item is in', async ({ page }) => {
 
 test('narrows by tag, AND-matching two', async ({ page }) => {
   await page.goto('/items')
+  // The chips live behind the search pill's filter control, as they do on the
+  // box index — the sheet stays open while both are picked.
+  await page.getByTestId('open-filters').click()
   await page.getByTestId('tag-filter-kitchen').click()
+  await page.getByTestId('apply-filters').click()
   await expect(page.getByText('Panasonic bread machine')).toBeVisible()
   await expect(page.getByText('Springform tins, set of 3')).toBeVisible()
+
   // A second tag must narrow, not widen: only an item carrying both survives.
+  await page.getByTestId('open-filters').click()
   await page.getByTestId('tag-filter-fragile').click()
+  await page.getByTestId('apply-filters').click()
   await expect(page.getByText('Springform tins, set of 3')).toBeVisible()
   await expect(page.getByText('Panasonic bread machine')).toBeHidden()
 })
@@ -50,17 +57,24 @@ test('never lists an item from an archived box', async ({ page }) => {
 
 test('keeps the term and the tags in the URL across a reload', async ({ page }) => {
   await page.goto('/items')
-  await page.getByTestId('items-search').fill('returns')
+  await page.getByTestId('search-input').fill('returns')
   await expect(page).toHaveURL(/q=returns/)
   await expect(page.getByText('2019 returns and receipts')).toBeVisible()
   await expect(page.getByText('Navy wool peacoat')).toBeHidden()
 
+  await page.getByTestId('open-filters').click()
   await page.getByTestId('tag-filter-paperwork').click()
+  await page.getByTestId('apply-filters').click()
   await expect(page).toHaveURL(/tags=\w+/)
 
   await page.reload()
-  await expect(page.getByTestId('items-search')).toHaveValue('returns')
+  await expect(page.getByTestId('search-input')).toHaveValue('returns')
+  // The count badge is how an applied filter stays visible once the sheet is
+  // closed; the chip itself is only pressed inside it.
+  await expect(page.getByTestId('filter-count')).toHaveText('1')
+  await page.getByTestId('open-filters').click()
   await expect(page.getByTestId('tag-filter-paperwork')).toHaveAttribute('aria-pressed', 'true')
+  await page.getByTestId('apply-filters').click()
   await expect(page.getByText('2019 returns and receipts')).toBeVisible()
   await expect(page.getByText('Navy wool peacoat')).toBeHidden()
 })

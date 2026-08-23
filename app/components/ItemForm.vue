@@ -44,7 +44,7 @@ function onSubmit() {
 </script>
 
 <template>
-  <UForm :state="state" :validate="validate" class="flex flex-col gap-4" @submit="onSubmit">
+  <UForm :state="state" :validate="validate" class="flex flex-col gap-3.5" @submit="onSubmit">
     <UFormField label="Title" name="title">
       <UInput v-model="state.title" class="w-full" />
     </UFormField>
@@ -70,7 +70,7 @@ function onSubmit() {
 
     <UAlert v-if="error" color="error" :description="error" data-testid="item-form-error" />
 
-    <UButton type="submit" :loading="pending" :disabled="pending" block>
+    <UButton type="submit" size="xl" class="rounded-[1.25rem] font-extrabold" :loading="pending" :disabled="pending" block>
       {{ existing ? 'Save changes' : 'Add item' }}
     </UButton>
   </UForm>
