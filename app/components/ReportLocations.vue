@@ -32,8 +32,8 @@ const statusCategories = computed(() => ({
 </script>
 
 <template>
-  <section>
-    <h2 class="font-medium">Boxes by location</h2>
+  <section class="sb-card flex flex-col gap-3 p-4">
+    <h2 class="sb-mono" :style="{ color: 'var(--sb-muted)' }">Boxes by location</h2>
     <p v-if="groups.length === 0" data-testid="locations-empty">
       No boxes yet.
     </p>

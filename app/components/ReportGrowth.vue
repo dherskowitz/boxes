@@ -16,8 +16,8 @@ const monthTicks = computed(() => props.growth.map((_, i) => i))
 </script>
 
 <template>
-  <section>
-    <h2 class="font-medium">Growth</h2>
+  <section class="sb-card flex flex-col gap-3 p-4">
+    <h2 class="sb-mono" :style="{ color: 'var(--sb-muted)' }">Growth</h2>
     <p v-if="growth.length === 0" data-testid="growth-empty">
       No history yet.
     </p>

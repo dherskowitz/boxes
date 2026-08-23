@@ -46,8 +46,8 @@ const xTicks = computed(() => rows.value.map((_, i) => i))
 </script>
 
 <template>
-  <section>
-    <h2 class="font-medium">Items per box</h2>
+  <section class="sb-card flex flex-col gap-3 p-4">
+    <h2 class="sb-mono" :style="{ color: 'var(--sb-muted)' }">Items per box</h2>
     <p v-if="rows.length === 0" data-testid="items-per-box-empty">
       No boxes yet.
     </p>

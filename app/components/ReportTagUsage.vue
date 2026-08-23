@@ -30,8 +30,8 @@ const xTicks = computed(() => rows.value.map((_, i) => i))
 </script>
 
 <template>
-  <section>
-    <h2 class="font-medium">Tag usage</h2>
+  <section class="sb-card flex flex-col gap-3 p-4">
+    <h2 class="sb-mono" :style="{ color: 'var(--sb-muted)' }">Tag usage</h2>
     <p v-if="rows.length === 0" data-testid="tag-usage-empty">
       No tags yet.
     </p>
