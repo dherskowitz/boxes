@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test'
-import { authedPb, createBox, createItem, throwawayBoxes } from './helpers'
+import { authedPb, boxAction, closeMenu, createBox, createItem, openBoxActions, throwawayBoxes } from './helpers'
 
 // No `describe.configure({ mode: 'serial' })`: that only serialises within a
 // file, and at --workers=2 the files run concurrently. Every test that writes
@@ -11,10 +11,11 @@ test.describe('as the box creator', () => {
 
   const throwaway = throwawayBoxes()
 
-  test('sees edit and delete controls', async ({ page }) => {
+  test('sees edit and delete actions in the box menu', async ({ page }) => {
     await page.goto('/box/seedbox1')
-    await expect(page.getByTestId('edit-box')).toBeVisible()
-    await expect(page.getByTestId('delete-box')).toBeVisible()
+    await openBoxActions(page)
+    await expect(page.getByRole('menuitem', { name: 'Edit box' })).toBeVisible()
+    await expect(page.getByRole('menuitem', { name: 'Delete box' })).toBeVisible()
   })
 
   test('lists the items in the box', async ({ page }) => {
@@ -31,9 +32,11 @@ test.describe('as the box creator', () => {
     await expect(page.getByTestId('item-list-empty')).toBeVisible()
   })
 
-  test('shows a not-found state for an unknown code', async ({ page }) => {
+  test('sends an unknown code to the 404 screen, not a bare line of text', async ({ page }) => {
     await page.goto('/box/nosuchbox')
-    await expect(page.getByTestId('box-not-found')).toBeVisible()
+    await expect(page.getByTestId('error-page')).toBeVisible()
+    await expect(page.getByTestId('error-status')).toHaveText('404')
+    await expect(page.getByTestId('error-home')).toBeVisible()
   })
 
   test('edits a box title through the UI and sees it on the page', async ({ page }) => {
@@ -42,7 +45,7 @@ test.describe('as the box creator', () => {
     throwaway.push(box.id)
 
     await page.goto(`/box/${box.qr_id}`)
-    await page.getByTestId('edit-box').click()
+    await boxAction(page, 'Edit box')
     await page.getByLabel('Title').fill('Garage shelving brackets and wall plugs')
     await page.getByRole('button', { name: 'Save changes' }).click()
     await expect(page.getByRole('heading', { name: 'Garage shelving brackets and wall plugs' })).toBeVisible()
@@ -59,17 +62,24 @@ test.describe('as the box creator', () => {
     throwaway.push(box.id)
 
     await page.goto(`/box/${box.qr_id}`)
-    await page.getByTestId('archive-box').click()
-    await expect(page.getByTestId('archive-box')).toHaveText('Unarchive')
+    await boxAction(page, 'Archive box')
+    // Reopen: the menu closes on select, and the label is the state readout.
+    await openBoxActions(page)
+    await expect(page.getByRole('menuitem', { name: 'Unarchive box' })).toBeVisible()
+    await closeMenu(page)
 
     await page.goto('/boxes')
     await expect(page.getByTestId('box-section-active').getByText(box.title)).toBeHidden()
+    await page.getByTestId('open-filters').click()
     await page.getByTestId('show-archived').click()
+    await page.getByTestId('apply-filters').click()
     await expect(page.getByTestId('box-section-archived').getByText(box.title)).toBeVisible()
 
     await page.goto(`/box/${box.qr_id}`)
-    await page.getByTestId('archive-box').click()
-    await expect(page.getByTestId('archive-box')).toHaveText('Archive')
+    await boxAction(page, 'Unarchive box')
+    await openBoxActions(page)
+    await expect(page.getByRole('menuitem', { name: 'Archive box' })).toBeVisible()
+    await closeMenu(page)
 
     await page.goto('/boxes')
     await expect(page.getByTestId('box-section-active').getByText(box.title)).toBeVisible()
@@ -83,9 +93,15 @@ test.describe('as the box creator', () => {
 
     await page.goto(`/box/${box.qr_id}`)
     // storage_items.box is required with cascadeDelete false, so the API
-    // answers 400 here — better to explain it than to let the user find out.
-    await expect(page.getByTestId('delete-box')).toBeDisabled()
-    await expect(page.getByText('Empty this box before deleting it.')).toBeVisible()
+    // answers 400 here. The control stays pressable and the dialog explains
+    // why nothing can happen — a greyed-out bin with a sentence floating near
+    // it left people guessing which of the two belonged to the other.
+    await boxAction(page, 'Delete box')
+    await expect(page.getByTestId('delete-box-blocked')).toContainText('still holds 1 item')
+    // No way through: the confirm is not rendered at all for a blocked delete.
+    await expect(page.getByTestId('confirm-delete-box')).toHaveCount(0)
+    await page.getByTestId('cancel-delete-box').click()
+    await expect(page).toHaveURL(`/box/${box.qr_id}`)
   })
 
   test('deletes an empty box only after confirming', async ({ page }) => {
@@ -94,15 +110,29 @@ test.describe('as the box creator', () => {
     throwaway.push(box.id)
 
     await page.goto(`/box/${box.qr_id}`)
-    await page.getByTestId('delete-box').click()
+    await boxAction(page, 'Delete box')
     await expect(page.getByTestId('delete-box-confirm')).toContainText(box.title)
+
+    // Deleting is not undoable and there is no trash, so the confirm is armed
+    // only by typing the name back.
+    await expect(page.getByTestId('confirm-delete-box')).toBeDisabled()
+    await page.getByTestId('delete-box-input').fill('Broken patio')
+    await expect(page.getByTestId('confirm-delete-box')).toBeDisabled()
+
     await page.getByTestId('cancel-delete-box').click()
     await expect(page).toHaveURL(`/box/${box.qr_id}`)
 
-    await page.getByTestId('delete-box').click()
+    await boxAction(page, 'Delete box')
+    // Reopening clears the box: a value left armed from last time would put
+    // the red button one tap from a mis-tap.
+    await expect(page.getByTestId('delete-box-input')).toHaveValue('')
+    await page.getByTestId('delete-box-input').fill(box.title)
     await page.getByTestId('confirm-delete-box').click()
     await expect(page).toHaveURL('/boxes')
     await expect(page.getByText(box.title)).toBeHidden()
+    // The delete invalidates this box's own detail query, so it refetches and
+    // 404s on the way out. That 404 is expected and must not surface.
+    await expect(page.getByTestId('error-page')).toBeHidden()
   })
 
   test('can bulk-move items to another box and back', async ({ page }) => {
@@ -173,25 +203,31 @@ test.describe('as the box creator', () => {
     await expect(page.getByTestId('item-row')).toHaveCount(1)
   })
 
-  test('drops a bulk-move selection when the item list changes page', async ({ page }) => {
+  // This used to assert the opposite: with a pager, a selection had to be
+  // dropped when the page changed, because it let someone move items they
+  // could no longer see. Infinite scroll appends rather than replaces, so a
+  // selected row never leaves the list and clearing the selection would just
+  // be losing the reader's work.
+  test('keeps a bulk-move selection when the next page loads', async ({ page }) => {
     const pb = await authedPb()
     const box = await createBox(pb, { title: 'Paperbacks, two shelves worth' })
     throwaway.push(box.id)
-    await Promise.all(
-      Array.from({ length: 31 }, (_, i) =>
-        createItem(pb, { boxId: box.id, title: `Paperback bundle ${i + 1}` })
-      )
-    )
+    // Sequential: the SDK cancels concurrent requests to the same endpoint,
+    // and the cancelled ones still land server-side afterwards.
+    for (let i = 1; i <= 31; i++) {
+      await createItem(pb, { boxId: box.id, title: `Paperback bundle ${String(i).padStart(2, '0')}` })
+    }
 
     await page.goto(`/box/${box.qr_id}`)
     await page.getByTestId('toggle-select').click()
     await page.getByTestId('item-select').first().click()
     await expect(page.getByTestId('move-items')).toBeVisible()
 
-    await page.getByRole('button', { name: 'Page 2' }).click()
-    // A selection that survives a page change lets someone move items they
-    // cannot see.
-    await expect(page.getByTestId('move-items')).toBeHidden()
+    await page.getByRole('button', { name: 'Load more' }).click()
+    await expect(page.getByTestId('item-row')).toHaveCount(31)
+    await expect(page.getByTestId('move-items')).toBeVisible()
+    // Still exactly one, not one per page.
+    await expect(page.getByTestId('move-items')).toContainText('Move 1')
   })
 })
 
@@ -200,13 +236,15 @@ test.describe('as a granted editor', () => {
 
   test('can edit the box they were granted, but not delete it', async ({ page }) => {
     await page.goto('/box/seedbox1')
-    await expect(page.getByTestId('edit-box')).toBeVisible()
-    await expect(page.getByTestId('delete-box')).toBeHidden()
+    await openBoxActions(page)
+    await expect(page.getByRole('menuitem', { name: 'Edit box' })).toBeVisible()
+    await expect(page.getByRole('menuitem', { name: 'Delete box' })).toBeHidden()
   })
 
   test('cannot edit a box they were not granted', async ({ page }) => {
     await page.goto('/box/seedbox2')
-    await expect(page.getByTestId('edit-box')).toBeHidden()
+    await openBoxActions(page)
+    await expect(page.getByRole('menuitem', { name: 'Edit box' })).toBeHidden()
   })
 })
 
@@ -216,7 +254,35 @@ test.describe('as a read-only member', () => {
   test('can view every box but edit none', async ({ page }) => {
     await page.goto('/box/seedbox1')
     await expect(page.getByText('Winter coats and boots')).toBeVisible()
-    await expect(page.getByTestId('edit-box')).toBeHidden()
+    await openBoxActions(page)
+    await expect(page.getByRole('menuitem', { name: 'Edit box' })).toBeHidden()
     await expect(page.getByTestId('add-item')).toBeHidden()
+  })
+})
+
+test.describe('item layout', () => {
+  test.use({ storageState: 'tests/e2e/.auth/dana.json' })
+
+  // Which layout reads better depends on the box — twelve near-identical
+  // cables want a list, the good crockery wants pictures — so the choice is
+  // the reader's, and it has to survive leaving the page. Stored per device,
+  // not per box: it is a reading preference, not a fact about this box.
+  test('switches the item list between stacked and grid, and remembers which', async ({ page }) => {
+    await page.goto('/box/seedbox1')
+    const list = page.getByTestId('item-list')
+    await expect(list).toHaveAttribute('data-layout', 'row')
+
+    await page.getByTestId('item-layout-grid').click()
+    await expect(list).toHaveAttribute('data-layout', 'grid')
+
+    // A different box, and after a reload: the preference is scoped to neither.
+    await page.goto('/box/seedbox3')
+    await expect(page.getByTestId('item-list')).toHaveAttribute('data-layout', 'grid')
+    await page.reload()
+    await expect(page.getByTestId('item-list')).toHaveAttribute('data-layout', 'grid')
+
+    // Put it back, so the rest of the run starts from the default.
+    await page.getByTestId('item-layout-row').click()
+    await expect(page.getByTestId('item-list')).toHaveAttribute('data-layout', 'row')
   })
 })
