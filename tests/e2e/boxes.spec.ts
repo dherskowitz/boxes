@@ -42,12 +42,30 @@ test('shows the empty state when there are no active boxes', async ({ page }) =>
   await expect(page.getByTestId('box-list-empty-active')).toBeVisible()
 })
 
-test('creates a box with only a title and lands on its page', async ({ page }) => {
+// The primary action lands on the label, not the box. A box exists to have a
+// code on its side, and making that a second trip through the index is how one
+// ends up taped shut and unlabelled.
+test('creates a box with only a title and lands on its label', async ({ page }) => {
   await page.goto('/box/new')
   await page.getByLabel('Title').fill('Loft bedding and spare pillows')
-  await page.getByRole('button', { name: 'Create box' }).click()
-  await expect(page).toHaveURL(/\/box\/[a-z0-9]{8}$/)
+  await page.getByTestId('box-submit').click()
+  await expect(page).toHaveURL(/\/box\/[a-z0-9]{8}\/print$/)
   await expect(page.getByText('Loft bedding and spare pillows')).toBeVisible()
+
+  const qrId = new URL(page.url()).pathname.split('/')[2]
+  const pb = await authedPb()
+  const created = await pb.collection('storage_boxes').getFirstListItem(pb.filter('qr_id = {:qrId}', { qrId }))
+  throwaway.push(created.id)
+})
+
+// The header's Save is the other half: same create, but it stays out of the
+// print flow for a box whose label is already on it.
+test('the header save creates the box and lands on the box', async ({ page }) => {
+  await page.goto('/box/new')
+  await page.getByLabel('Title').fill('Spare curtain poles and brackets')
+  await page.getByTestId('form-save').click()
+  await expect(page).toHaveURL(/\/box\/[a-z0-9]{8}$/)
+  await expect(page.getByText('Spare curtain poles and brackets')).toBeVisible()
 
   const qrId = new URL(page.url()).pathname.split('/').pop()
   const pb = await authedPb()
@@ -67,15 +85,15 @@ test('disables the submit button while the create request is pending', async ({ 
 
   await page.goto('/box/new')
   await page.getByLabel('Title').fill('Loft bedding, take two')
-  const button = page.getByRole('button', { name: 'Create box' })
+  const button = page.getByTestId('box-submit')
   await button.click()
   // The pending state disables the button synchronously, before the request
   // resolves — this, not a race on a second click, is what actually prevents
   // a duplicate box on a fast double-tap.
   await expect(button).toBeDisabled()
-  await expect(page).toHaveURL(/\/box\/[a-z0-9]{8}$/)
+  await expect(page).toHaveURL(/\/box\/[a-z0-9]{8}\/print$/)
 
-  const qrId = new URL(page.url()).pathname.split('/').pop()
+  const qrId = new URL(page.url()).pathname.split('/')[2]
   const pb = await authedPb()
   const created = await pb.collection('storage_boxes').getFirstListItem(pb.filter('qr_id = {:qrId}', { qrId }))
   throwaway.push(created.id)

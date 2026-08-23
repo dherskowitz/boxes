@@ -25,6 +25,26 @@ async function pickTag(page: Page, name: string) {
   await page.getByRole('option').filter({ hasText: name }).first().click()
 }
 
+/**
+ * A name with no existing match has no option to click — the picker offers to
+ * create it instead, on its own row below the (empty) match list.
+ */
+async function createTagInline(page: Page, name: string) {
+  const input = page.getByPlaceholder('Add a tag')
+  await input.click()
+  await input.fill(name)
+  await page.getByTestId('create-tag').click()
+}
+
+/**
+ * The item form lays the vocabulary out as toggle chips rather than a
+ * combobox, so there is nothing to type into — the tag is already on screen.
+ * `exact` because "kitchen" is a substring of longer tag names.
+ */
+async function pickTagChip(page: Page, name: string) {
+  await page.getByRole('button', { name, exact: true }).click()
+}
+
 async function boxByQrId(qrId: string) {
   const pb = await authedPb()
   return pb.collection('storage_boxes').getFirstListItem<{ id: string, tags: string[] }>(
@@ -42,7 +62,9 @@ test('tags a box with an existing tag from autocomplete', async ({ page }) => {
   await pickTag(page, 'winter')
   await expect(page.getByTestId(`selected-tag-${winterId}`)).toBeVisible()
 
-  await page.getByRole('button', { name: 'Create box' }).click()
+  // The header's Save, not the print CTA: this test is about the tag landing
+  // on the record, and the box page is where the assertions below can read it.
+  await page.getByTestId('form-save').click()
   await expect(page).toHaveURL(/\/box\/[a-z0-9]{8}$/)
 
   const qrId = new URL(page.url()).pathname.split('/').pop() ?? ''
@@ -57,9 +79,10 @@ test('creates a new tag inline while tagging a box', async ({ page }) => {
   throwawayTitles.push('Tent, poles and the two-burner stove')
   await page.goto('/box/new')
   await page.getByLabel('Title').fill('Tent, poles and the two-burner stove')
-  await pickTag(page, newTag)
+  await createTagInline(page, newTag)
+  await expect(page.getByText(newTag)).toBeVisible()
 
-  await page.getByRole('button', { name: 'Create box' }).click()
+  await page.getByTestId('form-save').click()
   await expect(page).toHaveURL(/\/box\/[a-z0-9]{8}$/)
 
   const qrId = new URL(page.url()).pathname.split('/').pop() ?? ''
@@ -98,13 +121,12 @@ test('tags an item with an existing tag from autocomplete', async ({ page }) => 
   const box = await createBox(pb, { title: 'Pantry spillover' })
   throwaway.push(box.id)
 
-  await page.goto(`/box/${box.qr_id}`)
-  await page.getByTestId('add-item').click()
+  await page.goto(`/box/${box.qr_id}/item/new`)
   await page.getByLabel('Title').fill('Cast iron dutch oven')
-  await pickTag(page, 'kitchen')
-  await page.getByRole('button', { name: 'Add item' }).click()
+  await pickTagChip(page, 'kitchen')
+  await page.getByTestId('item-submit').click()
 
-  await expect(page.getByText('Cast iron dutch oven')).toBeVisible()
+  await expect(page).toHaveURL(/\/item\/\w+$/)
   const item = await pb.collection('storage_items').getFirstListItem<{ tags: string[] }>(
     pb.filter('box = {:boxId}', { boxId: box.id })
   )
