@@ -27,7 +27,7 @@ export default defineNuxtConfig({
   },
 
   nuxtQuery: {
-    autoImports: ['useQuery', 'useMutation', 'useQueryClient'],
+    autoImports: ['useQuery', 'useInfiniteQuery', 'useMutation', 'useQueryClient'],
 
     queryClientOptions: {
       defaultOptions: {

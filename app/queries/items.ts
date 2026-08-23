@@ -65,6 +65,33 @@ export function useItemList(filters: Ref<ItemListFilters>) {
   })
 }
 
+/**
+ * The same list, fetched a page at a time and accumulated. See
+ * `useInfiniteBoxList` — same shape, same reason `filters.page` is ignored.
+ */
+export function useInfiniteItemList(filters: Ref<ItemListFilters>) {
+  const { $pb } = useNuxtApp()
+  return useInfiniteQuery({
+    queryKey: computed(() => keys.items.infinite(filters.value)),
+    initialPageParam: 1,
+    queryFn: ({ pageParam }) => {
+      const { raw, params } = itemFilter(filters.value)
+      return $pb.collection('storage_items').getList<StorageItem>(pageParam, PER_PAGE, {
+        filter: $pb.filter(raw, params),
+        // `box` as well as `tags`: /items lists across boxes, where a row
+        // without its parent box is meaningless.
+        expand: 'tags,box',
+        sort: '-created'
+      })
+    },
+    getNextPageParam: last => (last.page < last.totalPages ? last.page + 1 : undefined),
+    // `''` and `undefined` are not interchangeable: box detail passes `''`
+    // while its box loads and must not query, /items passes no boxId at all
+    // and must. Gate on `!== ''`, never on truthiness.
+    enabled: computed(() => filters.value.boxId !== '')
+  })
+}
+
 export function useItem(id: Ref<string>) {
   const { $pb } = useNuxtApp()
   return useQuery({

@@ -23,6 +23,33 @@ export function boxFilter(filters: BoxListFilters): PbFilter {
   return { raw: clauses.join(' && '), params }
 }
 
+/**
+ * The same list, fetched a page at a time and accumulated.
+ *
+ * `filters.page` is ignored here — the page is the query's own cursor, not
+ * something a caller sets. Every list screen uses this; `useBoxList` stays for
+ * the single-page reads that genuinely want one page (the dashboard's recent
+ * boxes, the move-target picker).
+ */
+export function useInfiniteBoxList(filters: Ref<BoxListFilters>) {
+  const { $pb } = useNuxtApp()
+  return useInfiniteQuery({
+    queryKey: computed(() => keys.boxes.infinite(filters.value)),
+    initialPageParam: 1,
+    queryFn: ({ pageParam }) => {
+      const { raw, params } = boxFilter(filters.value)
+      return $pb.collection('storage_boxes').getList<StorageBox>(pageParam, PER_PAGE, {
+        filter: $pb.filter(raw, params),
+        expand: 'tags',
+        sort: '-created'
+      })
+    },
+    // `undefined` is what tells TanStack there is no next page, which is what
+    // `hasNextPage` reads.
+    getNextPageParam: last => (last.page < last.totalPages ? last.page + 1 : undefined)
+  })
+}
+
 export function useBoxList(filters: Ref<BoxListFilters>) {
   const { $pb } = useNuxtApp()
   return useQuery({

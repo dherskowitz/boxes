@@ -50,12 +50,20 @@ export const keys = {
   boxes: {
     all: ['boxes'] as const,
     list: (filters: BoxListFilters = {}) => ['boxes', 'list', filters] as const,
+    // A separate key from `list`: an infinite query's cache entry holds an
+    // array of pages, not one page, and the two shapes must not collide.
+    // `page` is dropped — it is the query's own cursor, so leaving it in would
+    // give the same list two cache entries.
+    infinite: ({ page: _page, ...filters }: BoxListFilters = {}) =>
+      ['boxes', 'infinite', filters] as const,
     byQrId: (qrId: string) => ['boxes', 'qr', qrId] as const,
     byId: (id: string) => ['boxes', 'id', id] as const
   },
   items: {
     all: ['items'] as const,
     list: (filters: ItemListFilters) => ['items', 'list', filters] as const,
+    infinite: ({ page: _page, ...filters }: ItemListFilters) =>
+      ['items', 'infinite', filters] as const,
     byId: (id: string) => ['items', 'id', id] as const
   },
   comments: {
