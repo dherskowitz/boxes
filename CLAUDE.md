@@ -132,6 +132,7 @@ pnpm test:e2e    # playwright, boots and stops its own dev server
 - Navigation is one floating pill (`AppNav`), and a screen hides it with `definePageMeta({ nav: false })` — detail screens and forms own that space for their own actions. A page that hides it must supply its own bottom padding.
 - `<component :is="'NuxtLink'">` does not resolve here — it renders a literal `<nuxtlink>` element that looks correct and navigates nowhere, and neither the compiler nor a screenshot catches it. Branch with `v-if` / `v-else` on a real `<NuxtLink>` instead.
 - `--sb-ink` is chrome that stays dark in both themes (the nav pill, the install nudge). For a solid block sitting *on a card* — an item thumbnail, an empty-state glyph — use `--sb-fill` / `--sb-on-fill`, which lightens in dark mode. `--sb-ink` there disappears into the card behind it.
+- Destructive actions go through `<DeleteConfirm>`: it names the record, offers to copy the name, and only arms once that name is typed back. Pass `blockedReason` when the delete cannot succeed at all — the dialog explains it instead of a disabled control with a sentence floating nearby.
 - A box's colour comes from `boxColor(qr_id)`, not the schema. Set `--c` / `--c-on` once per screen with `boxColorVars()`; the `.sb-*` classes read them.
 - Set the foreground whenever you set a background from stored data — `readableInk(hex)` picks it. A tag colour is user data and `UBadge`'s default ink is chosen for its own surface, so a painted chip inherited ink that vanished into the fill in dark mode.
 
