@@ -145,6 +145,7 @@ pnpm test:e2e    # playwright, boots and stops its own dev server
 
 - No empty `catch`, no `catch { console.log(e) }`. Handle it meaningfully or let it propagate.
 - PocketBase throws `ClientResponseError`; surface its message to the user rather than a generic "Something went wrong". A 403 usually means an API rule rejected the payload — check the ownership-field rules above before assuming a bug.
+- Sign-in is the exception: a 400 from `auth-with-password` gets our own copy via `signInError()`, never PocketBase's `Failed to authenticate.` Keep one wording for a wrong password and an unknown address — a different message for each turns the login form into a way to find out who has an account. Status 0 and 5xx keep their own message; "check your password" while the server is down sends people hunting for a typo that isn't there.
 - A rejected **update or delete** returns **404, not 403**: PocketBase applies those rules as a filter on the record lookup, so a record failing the rule is simply not found. Expect the 404, and assert the record is unchanged too.
 - Never swallow a failed mutation. If a write fails, the UI must say so and leave the user somewhere recoverable.
 

@@ -1,7 +1,31 @@
+import { ClientResponseError } from 'pocketbase'
 import type { AppUser } from '~/types/pocketbase'
 
 const NO_APP_ACCESS
   = 'Your account is not an enabled member of Storage Boxes. Ask an admin to grant you access.'
+
+const SIGN_IN_FAILED
+  = 'We could not sign you in. Check your email and password, then try again.'
+
+/**
+ * Replace PocketBase's wording for a rejected sign-in.
+ *
+ * The auth endpoint answers every bad sign-in with the same 400 and the same
+ * `Failed to authenticate.` — backend phrasing, and deliberately identical for
+ * a wrong password and an address with no account, so the message can never be
+ * used to find out who has one. Keep that property; only the wording changes.
+ *
+ * A 400 is the only rejection this endpoint issues, so anything else — offline
+ * (status 0), a 5xx — keeps its own message. Telling someone to check their
+ * password while the server is down sends them hunting for a typo that is not
+ * there, which is its own kind of silent failure.
+ *
+ * Exported separately from `useAuth` so it can be unit tested without a
+ * PocketBase instance or a Vue component tree.
+ */
+export function signInError(e: unknown): unknown {
+  return e instanceof ClientResponseError && e.status === 400 ? new Error(SIGN_IN_FAILED) : e
+}
 
 /**
  * Match the authed user against the member directory.
@@ -58,7 +82,11 @@ export function useAuthUser() {
     // from `pb-api-storage` too — and an entry cached without a session would
     // reject this account as a non-member.
     await clearApiCache()
-    const { record } = await $pb.collection('users').authWithPassword(email, password)
+    const { record } = await $pb.collection('users')
+      .authWithPassword(email, password)
+      .catch((e: unknown) => {
+        throw signInError(e)
+      })
     try {
       // Read straight from PocketBase, NOT through nuxt-query like every other
       // read in this app. This gate decides whether a session exists at all, so

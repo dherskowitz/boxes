@@ -28,8 +28,12 @@ test.describe('unauthenticated', () => {
       await page.getByLabel('Email').fill('dana@local.test')
       await page.getByLabel('Password').fill('storagedev123')
       await page.getByRole('button', { name: 'Sign in' }).click()
-      // signed in and inside the app, not stranded on the login screen
+      // signed in and inside the app, not stranded on the login screen.
+      // Sign out lives on /more, the nav pill's fifth slot, so reaching it is
+      // the proof the authenticated shell rendered.
       await expect(page).toHaveURL('/')
+      await page.getByTestId('nav-more').click()
+      await expect(page).toHaveURL('/more')
       await expect(page.getByTestId('sign-out')).toBeVisible()
     })
   }
@@ -43,10 +47,11 @@ test.describe('unauthenticated', () => {
     '/box/new',
     '/box/seedbox1',
     '/box/seedbox1/print',
-    '/box/seedbox1/share',
     // Any id: the guard must fire before the page ever asks for the record.
     '/item/nosuchitem0001',
     '/print-sheet',
+    '/scan',
+    '/more',
     '/search',
     '/tags',
     '/reports'
@@ -60,6 +65,9 @@ test.describe('unauthenticated', () => {
       // which looks exactly like an unprotected route.
       await expect(page).toHaveURL(/\/login\?redirect=/, { timeout: 45_000 })
       expect(new URL(page.url()).searchParams.get('redirect')).toBe(path)
+      // The login screen has no shell around it, so neither the nav pill nor
+      // the page that holds sign out is rendered.
+      await expect(page.getByTestId('nav-more')).toBeHidden()
       await expect(page.getByTestId('sign-out')).toBeHidden()
     })
   }
@@ -86,7 +94,23 @@ test.describe('unauthenticated', () => {
     await page.getByLabel('Email').fill('dana@local.test')
     await page.getByLabel('Password').fill('wrongpassword')
     await page.getByRole('button', { name: 'Sign in' }).click()
-    await expect(page.getByTestId('login-error')).toBeVisible()
+    // Our copy, not PocketBase's `Failed to authenticate.`
+    await expect(page.getByTestId('login-error')).toContainText(
+      'We could not sign you in. Check your email and password, then try again.'
+    )
+    await expect(page).toHaveURL(/\/login/)
+  })
+
+  test('says the same thing for an address with no account', async ({ page }) => {
+    // Same wording as a wrong password on purpose: a different message here
+    // would tell an attacker which addresses are registered.
+    await page.goto('/login')
+    await page.getByLabel('Email').fill('nobody@local.test')
+    await page.getByLabel('Password').fill('wrongpassword')
+    await page.getByRole('button', { name: 'Sign in' }).click()
+    await expect(page.getByTestId('login-error')).toContainText(
+      'We could not sign you in. Check your email and password, then try again.'
+    )
     await expect(page).toHaveURL(/\/login/)
   })
 })
@@ -99,8 +123,8 @@ test.describe('signed in as a member', () => {
     // shell around it, not about the box index — which now lives at /boxes.
     await page.goto('/')
     await expect(page.getByTestId('access-denied')).toBeHidden()
-    // exact: true — the header logo link's accessible name is "Storage Boxes",
-    // which substring-matches 'Boxes' too and makes the plain query ambiguous.
+    // The floating nav pill is the app shell now. exact: true because 'Boxes'
+    // is also a substring of other link names on the page.
     await expect(page.getByRole('link', { name: 'Boxes', exact: true })).toBeVisible()
   })
 

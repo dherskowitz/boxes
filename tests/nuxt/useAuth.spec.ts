@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { clearApiCache, deriveMembership, useAuthUser } from '~/composables/useAuth'
+import { ClientResponseError } from 'pocketbase'
+import { clearApiCache, deriveMembership, signInError, useAuthUser } from '~/composables/useAuth'
 
 const dana = { id: 'u_dana', name: 'Dana Herskowitz', role: 'owner' as const }
 const sam = { id: 'u_sam', name: 'Sam Okafor', role: 'member' as const }
@@ -105,5 +106,47 @@ describe('auth transitions clear the API cache', () => {
   it('signs out without throwing where the Cache API is unavailable', async () => {
     vi.stubGlobal('caches', undefined)
     await expect(useAuthUser().logout()).resolves.toBeUndefined()
+  })
+})
+
+describe('signInError', () => {
+  it('replaces PocketBase wording for a rejected sign-in', () => {
+    const rejected = new ClientResponseError({
+      status: 400,
+      response: { message: 'Failed to authenticate.', data: {} }
+    })
+    const replaced = signInError(rejected)
+    expect(replaced).toBeInstanceOf(Error)
+    expect(pbError(replaced)).toBe(
+      'We could not sign you in. Check your email and password, then try again.'
+    )
+  })
+
+  it('says the same thing whether the password is wrong or the account is unknown', () => {
+    // PocketBase answers both with an identical 400, and so must we — the
+    // message must not become an oracle for which addresses have accounts.
+    const wrongPassword = new ClientResponseError({
+      status: 400,
+      response: { message: 'Failed to authenticate.', data: {} }
+    })
+    const noSuchUser = new ClientResponseError({
+      status: 400,
+      response: { message: 'Failed to authenticate.', data: {} }
+    })
+    expect(pbError(signInError(wrongPassword))).toBe(pbError(signInError(noSuchUser)))
+  })
+
+  it('leaves a server failure alone rather than blaming the password', () => {
+    const down = new ClientResponseError({
+      status: 500,
+      response: { message: 'Something went wrong while processing your request.', data: {} }
+    })
+    expect(signInError(down)).toBe(down)
+  })
+
+  it('leaves an offline failure alone', () => {
+    // The SDK reports a dead network as status 0.
+    const offline = new ClientResponseError({ status: 0, originalError: new Error('Failed to fetch') })
+    expect(signInError(offline)).toBe(offline)
   })
 })
