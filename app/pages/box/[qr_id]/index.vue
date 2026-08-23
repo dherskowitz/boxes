@@ -160,22 +160,6 @@ async function onDelete() {
   }
 }
 
-// Add item
-const addItemOpen = ref(false)
-const { mutateAsync: createItem, isPending: createItemPending } = useCreateItem()
-const createItemError = ref('')
-async function onCreateItem(payload: { title: string, description: string, notes: string, tags: string[], images: File[] }) {
-  const current = box.value
-  if (!current) return
-  createItemError.value = ''
-  try {
-    await createItem({ boxId: current.id, ...payload })
-    addItemOpen.value = false
-  } catch (e) {
-    createItemError.value = pbError(e)
-  }
-}
-
 // Bulk move
 const selectMode = ref(false)
 const selectedIds = ref<string[]>([])
@@ -421,7 +405,7 @@ async function onMove() {
             color: 'var(--c-on)',
             boxShadow: '0 14px 28px color-mix(in oklch, var(--c) 45%, transparent)'
           }"
-          @click="addItemOpen = true"
+          :to="`/box/${qrId}/item/new`"
         >
           Add item
         </UButton>
@@ -430,12 +414,6 @@ async function onMove() {
       <UModal v-model:open="editOpen" title="Edit box">
         <template #body>
           <BoxForm :existing="box" :pending="updatePending" :error="updateError" @submit="onUpdateBox" />
-        </template>
-      </UModal>
-
-      <UModal v-model:open="addItemOpen" title="Add item">
-        <template #body>
-          <ItemForm :pending="createItemPending" :error="createItemError" @submit="onCreateItem" />
         </template>
       </UModal>
 

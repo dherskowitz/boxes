@@ -47,6 +47,7 @@ test.describe('unauthenticated', () => {
     '/box/new',
     '/box/seedbox1',
     '/box/seedbox1/print',
+    '/box/seedbox1/item/new',
     // Any id: the guard must fire before the page ever asks for the record.
     '/item/nosuchitem0001',
     '/print-sheet',

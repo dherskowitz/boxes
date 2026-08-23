@@ -23,9 +23,8 @@ test('the item form refuses an empty title', async ({ page }) => {
   const box = await createBox(pb, { title: 'Camping gear, tent poles and pegs' })
   throwaway.push(box.id)
 
-  await page.goto(`/box/${box.qr_id}`)
-  await page.getByTestId('add-item').click()
-  await page.getByRole('button', { name: 'Add item' }).click()
+  await page.goto(`/box/${box.qr_id}/item/new`)
+  await page.getByTestId('item-submit').click()
   await expect(page.getByText('Give the item a title.')).toBeVisible()
 
   const items = await pb.collection('storage_items').getList(1, 5, {

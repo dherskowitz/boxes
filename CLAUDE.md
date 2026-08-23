@@ -59,15 +59,13 @@ Bigger dataset for looking at the app — 40 boxes, 388 items, photos:
 pnpm demo:up && pnpm seed:demo   # 40 boxes on its own instance (8099)
 ```
 
-It is **not** the e2e fixture; run `pb-seed.py` again before `pnpm test:e2e`.
-See `docs/demo-data.md`.
+It is **not** the e2e fixture; run `pb-seed.py` again before `pnpm test:e2e`. See `docs/demo-data.md`.
 
 ### Schema changes
 
-`pb_migrations/` recreates every `storage_*` collection, creates
-`apps` / `app_memberships` only if absent, and seeds the `apps` row with
-`key = "storage"`. Import runs in extend mode, so unrelated collections on a
-shared instance are never touched.
+`pb_migrations/` recreates every `storage_*` collection, creates `apps` / `app_memberships` only if
+absent, and seeds the `apps` row with `key = "storage"`. Import runs in extend mode, so unrelated
+collections on a shared instance are never touched.
 
 Schema edits are made in a PocketBase admin UI, then captured:
 
@@ -76,8 +74,7 @@ python3 scripts/pb-snapshot.py <url>   # rewrites the migration from a live inst
 git diff pb_migrations/                # should show only the change you made
 ```
 
-The snapshot strips per-instance timestamps, so a non-empty diff always means a
-real schema change. Never hand-edit the generated migration.
+The snapshot strips per-instance timestamps, so a non-empty diff always means a real schema change. Never hand-edit the generated migration.
 
 ## The loop
 
@@ -132,6 +129,8 @@ pnpm test:e2e    # playwright, boots and stops its own dev server
 - Screenshot any screen you build and look at it before calling it done. Check the narrow viewport for clipped text and content under the safe area.
 - Declare the design tokens with `@theme static`, never a bare `@theme`. Tailwind v4 emits only the custom properties its own utilities reference, and Nuxt UI builds `--ui-bg-inverted`, `--ui-border-accented` and friends off the neutral scale from a stylesheet Tailwind never scans — tree-shaken away, they resolve to empty and every default component silently loses its background and border.
 - Slot classes set in `app/app.config.ts` are **prepended** to each component's own, so anything Nuxt UI also sets (its 1px `ring`, its radius) still wins. Set only properties it leaves alone; use the per-instance `:ui` prop to override one it does.
+- A full-screen form's Save sits in `<FormHeader>`, outside the `<form>`: give `UForm` an `id` and the button `:form` plus `type="submit"`, so it runs the same `validate`. Never emit straight from a second button — that is a create path with no validation. An action on a `.sb-header` a box colour scopes takes `var(--c-on, var(--sb-amber))`; fixed amber disappears on the warmer stops.
+- `TagPicker` has exactly two variants: `search` (the box form — chips in the field, matches below with each tag's box count from `useTagUsage()`) and `chips` (the item form — the vocabulary as toggles). Don't add a third way to pick a tag.
 - Navigation is one floating pill (`AppNav`), and a screen hides it with `definePageMeta({ nav: false })` — detail screens and forms own that space for their own actions. A page that hides it must supply its own bottom padding.
 - `<component :is="'NuxtLink'">` does not resolve here — it renders a literal `<nuxtlink>` element that looks correct and navigates nowhere, and neither the compiler nor a screenshot catches it. Branch with `v-if` / `v-else` on a real `<NuxtLink>` instead.
 - `--sb-ink` is chrome that stays dark in both themes (the nav pill, the install nudge). For a solid block sitting *on a card* — an item thumbnail, an empty-state glyph — use `--sb-fill` / `--sb-on-fill`, which lightens in dark mode. `--sb-ink` there disappears into the card behind it.
@@ -152,6 +151,7 @@ pnpm test:e2e    # playwright, boots and stops its own dev server
 - PocketBase throws `ClientResponseError`; surface its message to the user rather than a generic "Something went wrong". A 403 usually means an API rule rejected the payload — check the ownership-field rules above before assuming a bug.
 - Sign-in is the exception: a 400 from `auth-with-password` gets our own copy via `signInError()`, never PocketBase's `Failed to authenticate.` Keep one wording for a wrong password and an unknown address — a different message for each turns the login form into a way to find out who has an account. Status 0 and 5xx keep their own message; "check your password" while the server is down sends people hunting for a typo that isn't there.
 - A rejected **update or delete** returns **404, not 403**: PocketBase applies those rules as a filter on the record lookup, so a record failing the rule is simply not found. Expect the 404, and assert the record is unchanged too.
+- `storage_items.notes` has no read rule of its own, and every app member can read every box — so every member reads the notes. Label the field by who can *change* it; "editors only" is a claim the API does not make.
 - A missing record gets the 404 screen, not a line of text under the app chrome: detail pages call `useNotFound(error, deleting)` and `app/error.vue` handles it. Pass the `deleting` flag — a delete invalidates the record's own detail query, which refetches and 404s while the page is still mounted, so without it every successful delete ends on the error screen.
 - Never swallow a failed mutation. If a write fails, the UI must say so and leave the user somewhere recoverable.
 

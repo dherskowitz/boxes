@@ -65,17 +65,15 @@ test.describe('as the box creator', () => {
     const box = await createBox(pb, { title: 'Guest room linens' })
     throwaway.push(box.id)
 
-    await page.goto(`/box/${box.qr_id}`)
-    await page.getByTestId('add-item').click()
+    await page.goto(`/box/${box.qr_id}/item/new`)
     await page.getByLabel('Title').fill('Spare duvet and two pillows')
-    await page.getByLabel('Photos').setInputFiles([
+    await page.getByTestId('photo-library-input').setInputFiles([
       { name: 'a.png', mimeType: 'image/png', buffer: TINY_PNG },
       { name: 'b.png', mimeType: 'image/png', buffer: TINY_PNG }
     ])
-    await page.getByRole('button', { name: 'Add item' }).click()
-    await expect(page.getByText('Spare duvet and two pillows')).toBeVisible()
-
-    await page.getByText('Spare duvet and two pillows').click()
+    // Save item lands on the item it just made, so there is no hop back
+    // through the box for the gallery assertions below.
+    await page.getByTestId('item-submit').click()
     await expect(page).toHaveURL(/\/item\/\w+$/)
     await expect(page.getByTestId('item-gallery-image')).toHaveCount(2)
     // A photo with no alt text is invisible to a screen reader.
@@ -88,16 +86,15 @@ test.describe('as the box creator', () => {
     const box = await createBox(pb, { title: 'Shed: hand tools' })
     throwaway.push(box.id)
 
-    await page.goto(`/box/${box.qr_id}`)
-    await page.getByTestId('add-item').click()
+    await page.goto(`/box/${box.qr_id}/item/new`)
     await page.getByLabel('Title').fill('Ratchet set and sockets')
-    await page.getByLabel('Photos').setInputFiles([
+    await page.getByTestId('photo-library-input').setInputFiles([
       { name: 'a.png', mimeType: 'image/png', buffer: TINY_PNG },
       { name: 'b.png', mimeType: 'image/png', buffer: TINY_PNG },
       { name: 'c.png', mimeType: 'image/png', buffer: TINY_PNG }
     ])
-    await page.getByRole('button', { name: 'Add item' }).click()
-    await page.getByText('Ratchet set and sockets').click()
+    await page.getByTestId('item-submit').click()
+    await expect(page).toHaveURL(/\/item\/\w+$/)
 
     // The hero is the way in, and the count replaces the dots that used to
     // claim the static image could be swiped.
@@ -128,15 +125,14 @@ test.describe('as the box creator', () => {
     const box = await createBox(pb, { title: 'Shed: fixings' })
     throwaway.push(box.id)
 
-    await page.goto(`/box/${box.qr_id}`)
-    await page.getByTestId('add-item').click()
+    await page.goto(`/box/${box.qr_id}/item/new`)
     await page.getByLabel('Title').fill('Assorted screws and wall plugs')
-    await page.getByLabel('Photos').setInputFiles([
+    await page.getByTestId('photo-library-input').setInputFiles([
       { name: 'a.png', mimeType: 'image/png', buffer: TINY_PNG },
       { name: 'b.png', mimeType: 'image/png', buffer: TINY_PNG }
     ])
-    await page.getByRole('button', { name: 'Add item' }).click()
-    await page.getByText('Assorted screws and wall plugs').click()
+    await page.getByTestId('item-submit').click()
+    await expect(page).toHaveURL(/\/item\/\w+$/)
 
     // The second photo is the first thumbnail below the hero.
     await page.getByRole('button', { name: /View photo 2 .* full screen/ }).click()
