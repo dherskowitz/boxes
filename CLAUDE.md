@@ -131,6 +131,7 @@ pnpm test:e2e    # playwright, boots and stops its own dev server
 - Slot classes set in `app/app.config.ts` are **prepended** to each component's own, so anything Nuxt UI also sets (its 1px `ring`, its radius) still wins. Set only properties it leaves alone; use the per-instance `:ui` prop to override one it does.
 - `--sb-ink` is chrome that stays dark in both themes (the nav pill, the install nudge). For a solid block sitting *on a card* — an item thumbnail, an empty-state glyph — use `--sb-fill` / `--sb-on-fill`, which lightens in dark mode. `--sb-ink` there disappears into the card behind it.
 - A box's colour comes from `boxColor(qr_id)`, not the schema. Set `--c` / `--c-on` once per screen with `boxColorVars()`; the `.sb-*` classes read them.
+- Set the foreground whenever you set a background from stored data — `readableInk(hex)` picks it. A tag colour is user data and `UBadge`'s default ink is chosen for its own surface, so a painted chip inherited ink that vanished into the fill in dark mode.
 
 ### TypeScript
 

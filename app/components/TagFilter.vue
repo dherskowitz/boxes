@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import type { StorageTag } from '~/types/pocketbase'
+
 /**
  * Tag filter chips. `v-model` is `string[]` of tag ids, the same shape
  * `BoxListFilters.tagIds` / `SearchFilters.tagIds` take, so a consumer binds
@@ -7,8 +9,8 @@
  * Selecting more than one narrows: `tagClauses()` AND-matches, so a record
  * must carry every selected tag.
  *
- * The colour dot is rendered from the tag's stored `color` via an inline
- * style — that is data, not styling, and is how `/tags` already draws it.
+ * A chip is drawn in the tag's stored `color` via an inline style — that is
+ * data, not styling, and is how `/tags` already draws it.
  */
 const model = defineModel<string[]>({ default: () => [] })
 
@@ -21,6 +23,19 @@ function isSelected(id: string): boolean {
 
 function toggle(id: string) {
   model.value = isSelected(id) ? model.value.filter(t => t !== id) : [...model.value, id]
+}
+
+function chipStyle(tag: StorageTag): Record<string, string> {
+  const color = tag.color || 'var(--sb-accent)'
+  return isSelected(tag.id)
+    // Not a hardcoded '#fff': the same green that needs dark ink in the picker
+    // needs it here too.
+    ? { background: color, color: readableInk(color), border: `2px solid ${color}` }
+    : {
+        background: 'var(--sb-surface)',
+        border: `2px solid color-mix(in oklch, ${color} 55%, var(--sb-surface))`,
+        color: `color-mix(in oklch, ${color} 80%, var(--sb-text))`
+      }
 }
 </script>
 
@@ -36,30 +51,31 @@ function toggle(id: string) {
   <!-- Nothing to filter by until the shared vocabulary has a tag in it, and an
        empty row of chips is only dead space on a phone. -->
   <div v-else-if="(tags ?? []).length > 0" class="flex flex-wrap items-center gap-2">
-    <UButton
+    <!-- Outlined in the tag's own stored colour rather than one shared
+         accent, so a chip is recognisable before it is read. A tag with no
+         stored colour falls back to the app accent. -->
+    <button
       v-for="tag in tags ?? []"
       :key="tag.id"
-      size="sm"
-      :variant="isSelected(tag.id) ? 'solid' : 'outline'"
+      type="button"
+      class="sb-chip cursor-pointer px-3.5 py-2 text-xs"
+      :style="chipStyle(tag)"
       :aria-pressed="isSelected(tag.id)"
       :data-testid="`tag-filter-${tag.name}`"
       @click="toggle(tag.id)"
     >
-      <span
-        class="size-2 shrink-0 rounded-full"
-        :style="tag.color ? { backgroundColor: tag.color } : undefined"
-      />
       {{ tag.name }}
-    </UButton>
+    </button>
 
-    <UButton
+    <button
       v-if="model.length > 0"
-      size="sm"
-      variant="ghost"
+      type="button"
+      class="cursor-pointer px-2 text-xs font-extrabold"
+      :style="{ color: 'var(--sb-muted)' }"
       data-testid="clear-tag-filter"
       @click="model = []"
     >
       Clear tags
-    </UButton>
+    </button>
   </div>
 </template>

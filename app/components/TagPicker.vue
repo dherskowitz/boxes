@@ -101,10 +101,15 @@ async function onCreate(raw: string) {
     />
 
     <div v-if="selectedTags.length" class="flex flex-wrap gap-2">
+      <!-- The foreground is set alongside the background, never left to the
+           component: a tag colour is user data, and UBadge's default ink is
+           picked for its own surface, not for an arbitrary hex. -->
       <UBadge
         v-for="tag in selectedTags"
         :key="tag.id"
-        :style="tag.color ? { backgroundColor: tag.color } : undefined"
+        :style="tag.color
+          ? { backgroundColor: tag.color, color: readableInk(tag.color) }
+          : undefined"
         class="flex items-center gap-1"
         :data-testid="`selected-tag-${tag.id}`"
       >
@@ -113,6 +118,7 @@ async function onCreate(raw: string) {
           icon="i-lucide-x"
           size="xs"
           variant="link"
+          class="text-current"
           :aria-label="`Remove ${tag.name}`"
           :data-testid="`remove-tag-${tag.id}`"
           @click="removeTag(tag.id)"
