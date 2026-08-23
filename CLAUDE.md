@@ -127,6 +127,9 @@ pnpm test:e2e    # playwright, boots and stops its own dev server
 - Give every `UAlert` an explicit `color` (`error` / `warning` / `neutral` / `info`). The default is the primary colour, so an uncoloured error renders green.
 - Every form is a `UForm` with a plain `validate` returning `FormError[]`, one `UFormField name="…"` per field. No validation library, and no native `required` — its bubble fires before `validate` and the field message never shows. Never disable a submit button to stand in for validation; disable it only while the mutation is pending.
 - Screenshot any screen you build and look at it before calling it done. Check the narrow viewport for clipped text and content under the safe area.
+- Declare the design tokens with `@theme static`, never a bare `@theme`. Tailwind v4 emits only the custom properties its own utilities reference, and Nuxt UI builds `--ui-bg-inverted`, `--ui-border-accented` and friends off the neutral scale from a stylesheet Tailwind never scans — tree-shaken away, they resolve to empty and every default component silently loses its background and border.
+- Slot classes set in `app/app.config.ts` are **prepended** to each component's own, so anything Nuxt UI also sets (its 1px `ring`, its radius) still wins. Set only properties it leaves alone; use the per-instance `:ui` prop to override one it does.
+- `--sb-ink` is chrome that stays dark in both themes (the nav pill, the install nudge). For a solid block sitting *on a card* — an item thumbnail, an empty-state glyph — use `--sb-fill` / `--sb-on-fill`, which lightens in dark mode. `--sb-ink` there disappears into the card behind it.
 
 ### TypeScript
 

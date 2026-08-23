@@ -1,2 +1,207 @@
 @import "tailwindcss";
 @import "@nuxt/ui";
+
+/* ---------------------------------------------------------------------------
+   Storage Boxes v2 tokens.
+
+   Every value below is lifted from the v2 design doc rather than picked here.
+   Three scales: `brand` (the signature violet), `amber` (the scan/CTA colour)
+   and `sand` (the warm neutral the whole app sits on). Nuxt UI needs a full
+   50–950 scale per colour, so the design's single stop is the 500/600 anchor
+   and the rest is interpolated around it in oklch.
+--------------------------------------------------------------------------- */
+/* `static`, not a bare `@theme`: Tailwind v4 only emits the custom properties
+   its generated utilities reference, and Nuxt UI builds its own tokens
+   (`--ui-bg-inverted`, `--ui-border-accented`, …) by referencing the neutral
+   scale from a stylesheet Tailwind does not scan. Tree-shaken away, those
+   tokens resolve to nothing: `bg-inverted` paints transparent and every input
+   ring falls back to `currentColor`. `static` emits the whole scale. */
+@theme static {
+  --font-sans: 'Plus Jakarta Sans', ui-sans-serif, system-ui, sans-serif;
+  --font-mono: 'DM Mono', ui-monospace, monospace;
+
+  /* Accent — design: oklch(0.55 0.21 292) */
+  --color-brand-50: oklch(0.97 0.02 292);
+  --color-brand-100: oklch(0.94 0.04 292);
+  --color-brand-200: oklch(0.89 0.07 292);
+  --color-brand-300: oklch(0.82 0.11 292);
+  --color-brand-400: oklch(0.70 0.17 292);
+  --color-brand-500: oklch(0.62 0.20 292);
+  --color-brand-600: oklch(0.55 0.21 292);
+  --color-brand-700: oklch(0.47 0.19 292);
+  --color-brand-800: oklch(0.40 0.16 292);
+  --color-brand-900: oklch(0.34 0.13 292);
+  --color-brand-950: oklch(0.24 0.09 292);
+
+  /* Scan button / secondary CTA — design: oklch(0.78 0.16 75) */
+  --color-amber-50: oklch(0.98 0.02 80);
+  --color-amber-100: oklch(0.95 0.05 80);
+  --color-amber-200: oklch(0.91 0.09 80);
+  --color-amber-300: oklch(0.86 0.13 78);
+  --color-amber-400: oklch(0.82 0.15 76);
+  --color-amber-500: oklch(0.78 0.16 75);
+  --color-amber-600: oklch(0.70 0.15 70);
+  --color-amber-700: oklch(0.58 0.13 65);
+  --color-amber-800: oklch(0.46 0.10 62);
+  --color-amber-900: oklch(0.38 0.08 60);
+  --color-amber-950: oklch(0.25 0.05 58);
+
+  /* Warm neutral — design: bg #f4f1ea, line #e2ded3, muted #7a7468, ink #1c1a17 */
+  --color-sand-50: #f8f6f1;
+  --color-sand-100: #f4f1ea;
+  --color-sand-200: #e2ded3;
+  --color-sand-300: #d5d0c5;
+  --color-sand-400: #b3ada0;
+  --color-sand-500: #8a8478;
+  --color-sand-600: #7a7468;
+  --color-sand-700: #5f5a50;
+  --color-sand-800: #3a3731;
+  --color-sand-900: #262421;
+  --color-sand-950: #1c1a17;
+}
+
+/* Semantic surface tokens. The bespoke chrome (header blocks, tinted box
+   cards, the nav pill) reads these rather than Tailwind utilities, because
+   most of it is `color-mix` against a per-box colour that no utility spells. */
+:root {
+  --sb-bg: var(--color-sand-100);
+  --sb-surface: #ffffff;
+  --sb-text: var(--color-sand-950);
+  --sb-muted: var(--color-sand-600);
+  --sb-line: var(--color-sand-200);
+  --sb-accent: var(--color-brand-600);
+  --sb-amber: var(--color-amber-500);
+  --sb-amber-ink: #2a1f06;
+  --sb-ink: #1c1a17;
+  --sb-on-ink: #ffffff;
+
+  /* A solid, high-contrast fill *on a surface* — item thumbnails, empty-state
+     glyphs, count chips. Distinct from `--sb-ink`, which is a deliberately
+     dark chrome colour in both themes (the nav pill, the install nudge): on a
+     dark ground that same near-black disappears into the card behind it. */
+  --sb-fill: #1c1a17;
+  --sb-on-fill: #ffffff;
+}
+
+.dark {
+  --sb-bg: #121114;
+  --sb-surface: #1b1a1e;
+  --sb-text: #f3f1ec;
+  --sb-muted: #98938a;
+  --sb-line: #2c2a30;
+  /* The header block darkens; the accent used for text and fills brightens.
+     One value cannot do both jobs on a dark ground. */
+  --sb-accent: oklch(0.42 0.19 292);
+  --sb-ink: #08080a;
+  --sb-fill: #3a3741;
+  --sb-on-fill: #f3f1ec;
+}
+
+html,
+body {
+  background: var(--sb-bg);
+  color: var(--sb-text);
+  -webkit-font-smoothing: antialiased;
+}
+
+@layer components {
+  /* All-caps mono eyebrow. Used for record ids, section labels and counts. */
+  .sb-mono {
+    font-family: var(--font-mono);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    font-size: 0.6875rem;
+    font-weight: 500;
+  }
+
+  /* The saturated block every screen opens with. `--c` is the box's signature
+     colour where there is one box in view; without it the app accent. */
+  .sb-header {
+    background: var(--c, var(--sb-accent));
+    color: var(--c-on, #fff);
+    border-radius: 0 0 2rem 2rem;
+    padding: max(env(safe-area-inset-top), 1rem) 1.375rem 1.25rem;
+  }
+
+  /* Chunky outlined surface: 2px, generous radius. */
+  .sb-card {
+    background: var(--sb-surface);
+    border: 2px solid var(--sb-line);
+    border-radius: 1.25rem;
+  }
+
+  /* Same, washed with the box's colour so a card is recognisable before the
+     title is read. Mixes toward --sb-surface, not #fff, so dark mode holds. */
+  .sb-card-tinted {
+    background: color-mix(in oklch, var(--c) 10%, var(--sb-surface));
+    border: 2px solid color-mix(in oklch, var(--c) 30%, var(--sb-surface));
+    border-radius: 1.25rem;
+  }
+
+  /* Legible text on a `.sb-card-tinted` ground. */
+  .sb-on-tint {
+    color: color-mix(in oklch, var(--c) 78%, var(--sb-text));
+  }
+
+  .sb-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    border-radius: 999px;
+    padding: 0.25rem 0.625rem;
+    font-size: 0.6875rem;
+    font-weight: 800;
+    line-height: 1.25;
+    white-space: nowrap;
+  }
+
+  /* Chip drawn in the box colour on a tinted card. */
+  .sb-chip-outline {
+    background: var(--sb-surface);
+    border: 1.5px solid color-mix(in oklch, var(--c, var(--sb-line)) 30%, var(--sb-surface));
+    color: color-mix(in oklch, var(--c, var(--sb-text)) 78%, var(--sb-text));
+  }
+
+  .sb-chip-solid {
+    background: var(--c, var(--sb-accent));
+    color: var(--c-on, #fff);
+  }
+
+  /* Tight display type. The design's headings are 800 weight with negative
+     tracking at every size; this keeps that from being retyped nine times. */
+  .sb-display {
+    font-weight: 800;
+    letter-spacing: -0.03em;
+    line-height: 1.05;
+  }
+}
+
+/* The floating nav pill overlaps content, so every screen reserves room for
+   it: the pill's height, its 22px inset off the bottom, the phone's home bar,
+   and a gap on top of all that — the last row of a list sitting flush against
+   the pill reads as clipped, and on a real device the thumb is already there. */
+.sb-page {
+  padding-bottom: calc(9rem + env(safe-area-inset-bottom));
+}
+
+@media print {
+  .sb-nav,
+  .sb-header,
+  .no-print {
+    display: none !important;
+  }
+
+  .sb-page {
+    padding-bottom: 0;
+  }
+}
+
+@keyframes sb-pulse {
+  0%, 100% { opacity: 0.3; }
+  50% { opacity: 1; }
+}
+
+/* Padded content region under a full-bleed `.sb-header`. */
+.sb-body {
+  padding: 1rem 1.375rem 0;
+}

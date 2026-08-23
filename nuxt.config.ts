@@ -57,7 +57,17 @@ export default defineNuxtConfig({
       link: [
         // The .ico is picked up implicitly; these are the ones that are not.
         { rel: 'icon', type: 'image/svg+xml', href: '/favicon.svg' },
-        { rel: 'apple-touch-icon', sizes: '180x180', href: '/apple-touch-icon.png' }
+        { rel: 'apple-touch-icon', sizes: '180x180', href: '/apple-touch-icon.png' },
+        // Plus Jakarta Sans + DM Mono, the two faces the v2 design is drawn
+        // in. `display=swap` so a slow or blocked CDN falls back to system-ui
+        // rather than holding the first paint — the primary target is a phone
+        // on a bad connection. The workbox rule below keeps them offline.
+        { rel: 'preconnect', href: 'https://fonts.googleapis.com' },
+        { rel: 'preconnect', href: 'https://fonts.gstatic.com', crossorigin: '' },
+        {
+          rel: 'stylesheet',
+          href: 'https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=DM+Mono:wght@400;500&display=swap'
+        }
       ]
     }
   },
@@ -196,6 +206,20 @@ export default defineNuxtConfig({
                   request.headers.get('Authorization') ? response : null
               }
             ]
+          }
+        },
+        {
+          // The two Google-hosted faces the design uses. CacheFirst because a
+          // font file at a versioned URL never changes, and because a phone in
+          // a garage should render in the app's type, not fall back to
+          // system-ui the moment it loses signal.
+          urlPattern: /^https:\/\/fonts\.(googleapis|gstatic)\.com\//,
+          handler: 'CacheFirst',
+          method: 'GET',
+          options: {
+            cacheName: 'google-fonts',
+            expiration: { maxEntries: 20, maxAgeSeconds: 60 * 60 * 24 * 365 },
+            cacheableResponse: { statuses: [0, 200] }
           }
         },
         {
