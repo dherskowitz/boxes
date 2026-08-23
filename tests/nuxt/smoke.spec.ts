@@ -11,7 +11,11 @@ describe('test harness', () => {
     // not what that page contains. The box index moved to `boxes.vue` in v1.2;
     // it stays the page this mounts, since `/` is now a dashboard whose value
     // comes from live queries rather than from being simple to mount.
+    //
+    // Matched case-insensitively: the v2 header dropped the literal "Boxes"
+    // heading for the count line ("0 boxes / 0 things"). This test is about
+    // the harness, so it should not break again the next time that copy moves.
     const page = await mountSuspended(boxes)
-    expect(page.text()).toContain('Boxes')
+    expect(page.text().toLowerCase()).toContain('boxes')
   })
 })
