@@ -181,6 +181,39 @@ export function useSetBoxStatus() {
   })
 }
 
+/**
+ * Status for several boxes at once, for the batch unarchive on `/archived`.
+ *
+ * Sequential, like `useMoveItems`: the SDK cancels concurrent requests to the
+ * same endpoint, so firing these in parallel would silently keep only the last
+ * one (CLAUDE.md). A partial failure is reported with a count rather than
+ * swallowed — some boxes really did move, and the list has to say so.
+ */
+export function useSetBoxStatuses() {
+  const { $pb } = useNuxtApp()
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async ({ ids, status }: { ids: string[], status: BoxStatus }) => {
+      assertOnline()
+      const failures: string[] = []
+      for (const id of ids) {
+        try {
+          await $pb.collection('storage_boxes').update<StorageBox>(id, { status })
+        } catch (e) {
+          failures.push(pbError(e))
+        }
+      }
+      if (failures.length > 0) {
+        throw new Error(`Updated ${ids.length - failures.length} of ${ids.length}. ${failures[0]}`)
+      }
+    },
+    // onSettled: a partial run still changed something, and a stale list would
+    // invite the user to unarchive boxes that are already out.
+    onSettled: () => queryClient.invalidateQueries({ queryKey: keys.boxes.all })
+  })
+}
+
 /** Creator-only at the API. A granted editor gets a 403 here by design. */
 export function useDeleteBox() {
   const { $pb } = useNuxtApp()
