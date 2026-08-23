@@ -2,8 +2,6 @@
 import type { FormError } from '@nuxt/ui'
 import type { StorageBox } from '~/types/pocketbase'
 
-const MAX_IMAGES = 15
-
 const props = defineProps<{
   existing?: StorageBox
   pending?: boolean
@@ -11,7 +9,11 @@ const props = defineProps<{
 }>()
 
 const emit = defineEmits<{
-  submit: [payload: { title: string, description: string, location: string, tags: string[], images: File[] }]
+  // No `images`. A box is identified by its colour, its name and its printed
+  // code — a photo of a sealed cardboard box tells you nothing the label does
+  // not. Photos belong on the items inside, which is what you are trying to
+  // recognise. The schema field stays; nothing writes to it.
+  submit: [payload: { title: string, description: string, location: string, tags: string[] }]
 }>()
 
 const state = reactive({
@@ -21,11 +23,8 @@ const state = reactive({
   // Copied, never the record's own array: an edit that changes nothing else
   // must still diff equal in `boxUpdatePayload`, and an empty init here would
   // send `tags: []` and silently wipe the box's tags on save.
-  tags: [...(props.existing?.tags ?? [])],
-  images: [] as File[]
+  tags: [...(props.existing?.tags ?? [])]
 })
-
-const tooManyImages = computed(() => state.images.length > MAX_IMAGES)
 
 function validate(): FormError[] {
   if (state.title.trim() === '') return [{ name: 'title', message: 'Give the box a title.' }]
@@ -37,14 +36,13 @@ function onSubmit() {
     title: state.title.trim(),
     description: state.description,
     location: state.location,
-    tags: state.tags,
-    images: state.images.slice(0, MAX_IMAGES)
+    tags: state.tags
   })
 }
 </script>
 
 <template>
-  <UForm :state="state" :validate="validate" class="flex flex-col gap-4" @submit="onSubmit">
+  <UForm :state="state" :validate="validate" class="flex flex-col gap-3.5" @submit="onSubmit">
     <UFormField label="Title" name="title">
       <UInput v-model="state.title" class="w-full" />
     </UFormField>
@@ -57,20 +55,13 @@ function onSubmit() {
       <UInput v-model="state.location" class="w-full" />
     </UFormField>
 
-    <!-- Editing images isn't supported by the update mutation (BoxEdit has no
-         images field) — the upload only appears on create. -->
-    <UFormField v-if="!existing" label="Photos" name="images">
-      <UFileUpload v-model="state.images" multiple accept="image/*" />
-      <p v-if="tooManyImages">Only the first {{ MAX_IMAGES }} photos will be uploaded.</p>
-    </UFormField>
-
     <UFormField label="Tags" name="tags">
       <TagPicker v-model="state.tags" />
     </UFormField>
 
     <UAlert v-if="error" color="error" :description="error" data-testid="box-form-error" />
 
-    <UButton type="submit" :loading="pending" :disabled="pending" block>
+    <UButton type="submit" size="xl" class="rounded-[1.25rem] font-extrabold" :loading="pending" :disabled="pending" block>
       {{ existing ? 'Save changes' : 'Create box' }}
     </UButton>
   </UForm>

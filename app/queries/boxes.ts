@@ -87,7 +87,6 @@ export interface NewBox {
   description?: string
   location?: string
   tags?: string[]
-  images?: File[]
 }
 
 export function useCreateBox() {
@@ -108,9 +107,8 @@ export function useCreateBox() {
       // The create rule requires created_by to equal the authed user id.
       body.set('created_by', userId.value)
       for (const tag of input.tags ?? []) body.append('tags', tag)
-      for (const image of await compressImages(input.images ?? [])) {
-        body.append('images', image)
-      }
+      // No images: boxes do not carry photos (see BoxForm). The schema field
+      // remains so an older box's pictures still load.
 
       // qr_id is unique-constrained. A collision is vanishingly unlikely but
       // would be a confusing failure on a create form, so retry once.
