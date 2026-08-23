@@ -1,4 +1,5 @@
 import type PocketBase from 'pocketbase'
+import type { Page } from '@playwright/test'
 import { expect, test } from '@playwright/test'
 import { authedPb, createBox, createItem, throwawayBoxes, throwawayTags } from './helpers'
 
@@ -20,6 +21,23 @@ async function createTag(pb: PocketBase, name: string): Promise<string> {
   return tag.id
 }
 
+/**
+ * The tag chips live behind the search bar's filter control now — a wrapping
+ * row of them was eating a third of the screen above the list they filter.
+ * Opening the sheet is a precondition for touching a chip, not a thing worth
+ * asserting in every test here.
+ */
+async function openFilters(page: Page): Promise<void> {
+  await page.getByTestId('open-filters').click()
+  await expect(page.getByTestId('apply-filters')).toBeVisible()
+}
+
+/** Applies the current selection and returns to the list underneath. */
+async function applyFilters(page: Page): Promise<void> {
+  await page.getByTestId('apply-filters').click()
+  await expect(page.getByTestId('apply-filters')).toBeHidden()
+}
+
 test('filters the box index down to boxes carrying the selected tag', async ({ page }) => {
   const pb = await authedPb()
   const shelvingId = await createTag(pb, SHELVING)
@@ -30,7 +48,9 @@ test('filters the box index down to boxes carrying the selected tag', async ({ p
   await page.goto('/boxes')
   await expect(page.getByText(untagged.title)).toBeVisible()
 
+  await openFilters(page)
   await page.getByTestId(`tag-filter-${SHELVING}`).click()
+  await applyFilters(page)
   await expect(page.getByText(tagged.title)).toBeVisible()
   await expect(page.getByText(untagged.title)).toBeHidden()
   // A seeded box carries its own tags, so it must drop out too.
@@ -46,10 +66,14 @@ test('AND-matches when two tags are selected, rather than widening the list', as
   throwaway.push(both.id, one.id)
 
   await page.goto('/boxes')
+  await openFilters(page)
   await page.getByTestId(`tag-filter-${SHELVING}`).click()
+  await applyFilters(page)
   await expect(page.getByText(one.title)).toBeVisible()
 
+  await openFilters(page)
   await page.getByTestId(`tag-filter-${SEASONAL}`).click()
+  await applyFilters(page)
   await expect(page.getByText(both.title)).toBeVisible()
   await expect(page.getByText(one.title)).toBeHidden()
 })
@@ -61,10 +85,14 @@ test('clearing the tag filter restores the full list', async ({ page }) => {
   throwaway.push(tagged.id)
 
   await page.goto('/boxes')
+  await openFilters(page)
   await page.getByTestId(`tag-filter-${SHELVING}`).click()
+  await applyFilters(page)
   await expect(page.getByText('Winter coats and boots')).toBeHidden()
 
+  await openFilters(page)
   await page.getByTestId('clear-tag-filter').click()
+  await applyFilters(page)
   await expect(page.getByText('Winter coats and boots')).toBeVisible()
   await expect(page.getByText(tagged.title)).toBeVisible()
 })
@@ -74,7 +102,9 @@ test('a filter that matches nothing reads differently from having no boxes at al
   await createTag(pb, UNUSED)
 
   await page.goto('/boxes')
+  await openFilters(page)
   await page.getByTestId(`tag-filter-${UNUSED}`).click()
+  await applyFilters(page)
   await expect(page.getByTestId('box-list-no-matches-active')).toBeVisible()
   // "no boxes yet" would invite the user to create their first box, which is
   // wrong advice when they have plenty and only the filter is too narrow.
@@ -92,8 +122,11 @@ test('the archived section honours the tag filter alongside the toggle', async (
   throwaway.push(archived.id)
 
   await page.goto('/boxes')
+  // Both narrow the same list, so they are set in one visit to the sheet.
+  await openFilters(page)
   await page.getByTestId('show-archived').click()
   await page.getByTestId(`tag-filter-${SEASONAL}`).click()
+  await applyFilters(page)
 
   await expect(page.getByTestId('box-section-archived').getByText(archived.title)).toBeVisible()
   await expect(page.getByTestId('box-section-archived').getByText('College photo albums')).toBeHidden()
@@ -110,7 +143,9 @@ test('filters search results by a tag, and keeps the filter in the URL', async (
   await expect(page.getByText(tagged.title)).toBeVisible()
   await expect(page.getByText(untagged.title)).toBeVisible()
 
+  await openFilters(page)
   await page.getByTestId(`tag-filter-${SHELVING}`).click()
+  await applyFilters(page)
   await expect(page.getByText(tagged.title)).toBeVisible()
   await expect(page.getByText(untagged.title)).toBeHidden()
   // The term is already in the URL so a search is linkable; the tags must be
@@ -133,7 +168,9 @@ test('filters search results down to items carrying the selected tag', async ({ 
   await page.goto('/search?q=Fairy%20lights')
   await expect(page.getByText('Fairy lights, spare bulbs')).toBeVisible()
 
+  await openFilters(page)
   await page.getByTestId(`tag-filter-${SEASONAL}`).click()
+  await applyFilters(page)
   await expect(page.getByText('Fairy lights, warm white')).toBeVisible()
   await expect(page.getByText('Fairy lights, spare bulbs')).toBeHidden()
 })
@@ -145,7 +182,9 @@ test('a search whose filters exclude everything reads differently from a term th
   await page.goto('/search?q=Winter%20coats')
   await expect(page.getByTestId('search-result-box')).toBeVisible()
 
+  await openFilters(page)
   await page.getByTestId(`tag-filter-${UNUSED}`).click()
+  await applyFilters(page)
   await expect(page.getByTestId('search-no-results-filtered')).toBeVisible()
   await expect(page.getByTestId('search-no-results')).toBeHidden()
 

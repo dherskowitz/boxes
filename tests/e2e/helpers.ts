@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs'
 import { randomUUID } from 'node:crypto'
 import { test } from '@playwright/test'
+import type { Page } from '@playwright/test'
 import PocketBase, { ClientResponseError } from 'pocketbase'
 
 // The playwright test process does not load this worktree's .env the way the
@@ -93,6 +94,16 @@ export async function tagIdByName(pb: PocketBase, name: string): Promise<string>
  * `cascadeDelete: false`, so a box holding items cannot be deleted — items go
  * first. Safe to call on a box that a test already deleted through the UI.
  */
+async function deleteCommentsOn(pb: PocketBase, itemId: string): Promise<void> {
+  for (;;) {
+    const page = await pb.collection('storage_comments').getList(1, 200, {
+      filter: pb.filter('item = {:itemId}', { itemId })
+    })
+    if (page.items.length === 0) break
+    for (const comment of page.items) await pb.collection('storage_comments').delete(comment.id)
+  }
+}
+
 export async function deleteBoxAndItems(pb: PocketBase, boxId: string): Promise<void> {
   // Re-query page 1 until it comes back empty rather than trusting a single
   // listing: cleanup must not leave an item behind, because the box delete
@@ -102,7 +113,15 @@ export async function deleteBoxAndItems(pb: PocketBase, boxId: string): Promise<
       filter: pb.filter('box = {:boxId}', { boxId })
     })
     if (page.items.length === 0) break
-    for (const item of page.items) await pb.collection('storage_items').delete(item.id)
+    for (const item of page.items) {
+      // `storage_comments.item` is a required relation with no cascade, so an
+      // item that was commented on cannot be deleted until its comments are.
+      // The comment delete rule is author-only: `pb` must be the client that
+      // wrote them, which for a test commenting through its own UI session it
+      // is.
+      await deleteCommentsOn(pb, item.id)
+      await pb.collection('storage_items').delete(item.id)
+    }
   }
   try {
     await pb.collection('storage_boxes').delete(boxId)
@@ -196,4 +215,33 @@ export function throwawayTags(): string[] {
     }
   })
   return names
+}
+
+/**
+ * Box and item actions live behind a kebab now, so a test cannot click them
+ * directly. The menu items carry no `data-testid` — Nuxt UI forwards only link
+ * props to the rendered element — so they are addressed by role and accessible
+ * name, which is what a person navigating with a screen reader gets too.
+ */
+export async function openBoxActions(page: Page): Promise<void> {
+  await page.getByTestId('box-actions').click()
+}
+
+export async function openItemActions(page: Page): Promise<void> {
+  await page.getByTestId('item-actions').click()
+}
+
+export async function boxAction(page: Page, name: string): Promise<void> {
+  await openBoxActions(page)
+  await page.getByRole('menuitem', { name }).click()
+}
+
+export async function itemAction(page: Page, name: string): Promise<void> {
+  await openItemActions(page)
+  await page.getByRole('menuitem', { name }).click()
+}
+
+/** Close an open menu without selecting anything. */
+export async function closeMenu(page: Page): Promise<void> {
+  await page.keyboard.press('Escape')
 }

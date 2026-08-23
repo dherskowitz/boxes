@@ -54,37 +54,71 @@ const errorMessage = computed(() => (error.value ? pbError(error.value) : ''))
 </script>
 
 <template>
-  <div class="flex flex-col gap-6">
-    <h1 class="text-lg font-medium">Search</h1>
+  <div>
+    <AppHeader>
+      <template #title>
+        <!-- `filterable` only once there is a term: `searchFilter` short-circuits
+             a blank term to `1 = 2` before the tag clauses, so a tag chosen on
+             the idle screen would be a control that visibly does nothing. -->
+        <SearchBar
+          v-model="term"
+          v-model:tags="tagIds"
+          :filterable="hasTerm"
+          @submit="() => {}"
+        />
+      </template>
+    </AppHeader>
 
-    <SearchBar v-model="term" @submit="() => {}" />
+    <div class="sb-body flex flex-col gap-4">
+      <div v-if="!hasTerm" data-testid="search-idle" class="flex flex-col items-center gap-4 px-2 py-12 text-center">
+        <div
+          class="flex size-24 items-center justify-center rounded-[2rem]"
+          :style="{ background: 'var(--sb-fill)', color: 'var(--sb-on-fill)' }"
+        >
+          <UIcon name="i-lucide-search" class="size-11" aria-hidden="true" />
+        </div>
+        <p class="text-sm" :style="{ color: 'var(--sb-muted)' }">
+          Search box titles, item titles, item descriptions and item notes.
+        </p>
+      </div>
 
-    <!-- Only once there is a term: `searchFilter` short-circuits a blank term
-         to `1 = 2` before the tag clauses, so a chip selected on the idle
-         screen would be a control that visibly does nothing. -->
-    <TagFilter v-if="hasTerm" v-model="tagIds" />
+      <div v-else-if="isPending" data-testid="search-loading" class="flex flex-col gap-3">
+        <USkeleton v-for="n in 4" :key="n" class="h-[76px] w-full rounded-[1.25rem]" />
+      </div>
 
-    <div v-if="!hasTerm" data-testid="search-idle">
-      <p>Search box titles, item titles, item descriptions and item notes.</p>
+      <UAlert v-else-if="isError" color="error" :description="errorMessage" />
+
+      <!-- A term that matches nothing and a term narrowed away by the tag
+           filter need different advice: the second is fixed by clearing a tag,
+           not by retyping. -->
+      <div
+        v-else-if="results.length === 0"
+        :data-testid="tagIds.length > 0 ? 'search-no-results-filtered' : 'search-no-results'"
+        class="flex flex-col items-center gap-5 px-2 py-10 text-center"
+      >
+        <div
+          class="flex size-28 items-center justify-center rounded-[2.125rem]"
+          :style="{ background: 'var(--sb-fill)', color: 'var(--sb-on-fill)' }"
+        >
+          <UIcon name="i-lucide-search-x" class="size-13" aria-hidden="true" />
+        </div>
+        <div class="flex flex-col gap-2">
+          <p class="sb-display text-[22px]">Nothing matched</p>
+          <p class="text-sm" :style="{ color: 'var(--sb-muted)' }">
+            <template v-if="tagIds.length > 0">
+              No results for "{{ activeTerm }}" with the selected tags.
+            </template>
+            <template v-else>
+              No results for "{{ activeTerm }}".
+            </template>
+          </p>
+        </div>
+        <UButton v-if="tagIds.length > 0" size="xl" block color="neutral" variant="outline" @click="tagIds = []">
+          Search all tags instead
+        </UButton>
+      </div>
+
+      <SearchResultList v-else :results="results" :term="activeTerm" />
     </div>
-
-    <div v-else-if="isPending" data-testid="search-loading" class="flex flex-col gap-3">
-      <USkeleton v-for="n in 4" :key="n" class="h-16 w-full" />
-    </div>
-
-    <UAlert v-else-if="isError" color="error" :description="errorMessage" />
-
-    <!-- A term that matches nothing and a term narrowed away by the tag
-         filter need different advice: the second is fixed by clearing a tag,
-         not by retyping. The original three states are untouched. -->
-    <div v-else-if="results.length === 0 && tagIds.length > 0" data-testid="search-no-results-filtered">
-      <p>No results for "{{ activeTerm }}" with the selected tags.</p>
-    </div>
-
-    <div v-else-if="results.length === 0" data-testid="search-no-results">
-      <p>No results for "{{ activeTerm }}".</p>
-    </div>
-
-    <SearchResultList v-else :results="results" />
   </div>
 </template>
