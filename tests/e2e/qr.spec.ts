@@ -58,3 +58,53 @@ test.describe('batch print sheet', () => {
     await expect(page.getByTestId('print-sheet-nothing-selected')).toBeVisible()
   })
 })
+
+test.describe('label sizes', () => {
+  test.use({ storageState: 'tests/e2e/.auth/dana.json' })
+
+  // The stock in the printer is a property of the printer, not of the box, so
+  // the choice has to outlive the page it was made on.
+  test('remembers the label size across boxes and reloads', async ({ page }) => {
+    await page.goto('/box/seedbox1/print')
+    await expect(page.getByTestId('print-size-label')).toContainText('4 × 4 in')
+
+    await page.getByTestId('label-size').click()
+    await page.getByRole('option', { name: '4 × 6 in' }).click()
+    await expect(page.getByTestId('print-size-label')).toContainText('4 × 6 in')
+
+    await page.goto('/box/seedbox3/print')
+    await expect(page.getByTestId('print-size-label')).toContainText('4 × 6 in')
+    await page.reload()
+    await expect(page.getByTestId('print-size-label')).toContainText('4 × 6 in')
+
+    // Back to the default, so the rest of the run starts where it expects to.
+    await page.getByTestId('label-size').click()
+    await page.getByRole('option', { name: '4 × 4 in' }).click()
+    await expect(page.getByTestId('print-size-label')).toContainText('4 × 4 in')
+  })
+
+  // The sheet's stock is its own choice: a sheet is many small stickers, a
+  // single label is one box, and they are rarely the same size.
+  test('the sheet keeps its own size, separate from the single label', async ({ page }) => {
+    await page.goto('/print-sheet')
+    // The preview, and its summary, only exist once something is selected.
+    await page.getByRole('button', { name: 'Select all' }).click()
+    await expect(page.getByTestId('sheet-summary')).toContainText('2 × 2 in')
+    // Four across a Letter sheet at 2in, twenty to a page.
+    await expect(page.getByTestId('sheet-summary')).toContainText('4 across')
+
+    await page.getByTestId('label-size').click()
+    await page.getByRole('option', { name: '4 × 3⅓ in' }).click()
+    // 4 × 3⅓ is sold six to a sheet; the arithmetic has to agree with the stock.
+    await expect(page.getByTestId('sheet-summary')).toContainText('6 per sheet')
+
+    await page.goto('/box/seedbox1/print')
+    await expect(page.getByTestId('print-size-label')).toContainText('4 × 4 in')
+
+    await page.goto('/print-sheet')
+    await page.getByTestId('label-size').click()
+    await page.getByRole('option', { name: '2 × 2 in' }).click()
+    await page.getByRole('button', { name: 'Select all' }).click()
+    await expect(page.getByTestId('sheet-summary')).toContainText('2 × 2 in')
+  })
+})
