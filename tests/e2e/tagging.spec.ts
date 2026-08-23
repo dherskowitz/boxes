@@ -1,6 +1,6 @@
 import type { Page } from '@playwright/test'
 import { expect, test } from '@playwright/test'
-import { authedPb, createBox, createItem, tagIdByName, throwawayBoxTitles, throwawayBoxes, throwawayTags } from './helpers'
+import { authedPb, boxAction, createBox, createItem, itemAction, tagIdByName, throwawayBoxTitles, throwawayBoxes, throwawayTags } from './helpers'
 
 test.use({ storageState: 'tests/e2e/.auth/dana.json' })
 
@@ -81,7 +81,7 @@ test('preserves existing tags when editing a box without touching them', async (
   throwaway.push(box.id)
 
   await page.goto(`/box/${box.qr_id}`)
-  await page.getByTestId('edit-box').click()
+  await boxAction(page, 'Edit box')
   await expect(page.getByTestId(`selected-tag-${winterId}`)).toBeVisible()
 
   await page.getByLabel('Title').fill('Attic overflow, west side')
@@ -127,7 +127,7 @@ test('preserves existing tags when editing an item without touching them', async
   })
 
   await page.goto(`/item/${item.id}`)
-  await page.getByTestId('edit-item').click()
+  await itemAction(page, 'Edit item')
   await expect(page.getByTestId(`selected-tag-${winterId}`)).toBeVisible()
 
   await page.getByLabel('Title').fill('Merino base layers, three sets')

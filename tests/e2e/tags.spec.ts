@@ -5,10 +5,16 @@ import { authedPbAs } from './helpers'
 test.describe('as an owner', () => {
   test.use({ storageState: 'tests/e2e/.auth/dana.json' })
 
+  // exact: true throughout this file. The row's rename and delete controls
+  // are icon buttons whose accessible names are "Rename winter" / "Delete
+  // winter" — deliberately naming the tag, so a screen reader reading the
+  // button list can tell six identical pencils apart. That makes a bare
+  // substring match for a tag name ambiguous; the tag's own label is the
+  // exact one.
   test('lists the seeded tags with usage counts', async ({ page }) => {
     await page.goto('/tags')
-    await expect(page.getByText('winter')).toBeVisible()
-    await expect(page.getByText('paperwork')).toBeVisible()
+    await expect(page.getByText('winter', { exact: true })).toBeVisible()
+    await expect(page.getByText('paperwork', { exact: true })).toBeVisible()
   })
 
   // The shared fixture ('kitchen') is renamed to 'kitchenware' partway
@@ -37,7 +43,7 @@ test.describe('as an owner', () => {
     await page.getByTestId('rename-tag-kitchen').click()
     await page.getByLabel('Name').fill('kitchenware')
     await page.getByRole('button', { name: 'Save' }).click()
-    await expect(page.getByText('kitchenware')).toBeVisible()
+    await expect(page.getByText('kitchenware', { exact: true })).toBeVisible()
 
     // PRD §7.7: renaming updates the label everywhere it is applied. Slice
     // A's box detail page (`/box/:qr_id`) is not built in this worktree —
@@ -77,7 +83,12 @@ test.describe('as an owner', () => {
     // 'sentimental'.
     const dialog = page.getByRole('dialog')
     await expect(dialog).toContainText('sentimental')
-    await expect(dialog).toContainText('1 boxes and 1 items')
+    await expect(dialog).toContainText('This label comes off 1 box and 1 item.')
+    // Armed only by typing the name back — a tag delete strips the label off
+    // every record carrying it, and there is no undo.
+    await expect(page.getByTestId('confirm-delete-tag')).toBeDisabled()
+    await page.getByTestId('delete-tag-input').fill('sentimental')
+    await expect(page.getByTestId('confirm-delete-tag')).toBeEnabled()
   })
 })
 
@@ -86,7 +97,7 @@ test.describe('as a plain member', () => {
 
   test('can see tags but not delete them', async ({ page }) => {
     await page.goto('/tags')
-    await expect(page.getByText('winter')).toBeVisible()
+    await expect(page.getByText('winter', { exact: true })).toBeVisible()
     await expect(page.getByTestId('delete-tag-sentimental')).toBeHidden()
   })
 
