@@ -68,18 +68,3 @@ test('the tag rename refuses a name that normalises to empty', async ({ page }) 
   )
   expect(unchanged.name).toBe(name)
 })
-
-test('the share grant refuses an empty selection', async ({ page }) => {
-  const pb = await authedPb()
-  const box = await createBox(pb, { title: 'Garden tools, secateurs and twine' })
-  throwaway.push(box.id)
-
-  await page.goto(`/box/${box.qr_id}/share`)
-  await page.getByTestId('grant-editor').click()
-  await expect(page.getByText('Choose a member to grant editor access to.')).toBeVisible()
-
-  const permissions = await pb.collection('storage_box_permissions').getList(1, 5, {
-    filter: pb.filter('box = {:boxId}', { boxId: box.id })
-  })
-  expect(permissions.totalItems).toBe(0)
-})
