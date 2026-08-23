@@ -152,10 +152,25 @@ export default defineNuxtConfig({
           // origin from the app. An unanchored pattern silently caches
           // nothing.
           urlPattern: /^https?:\/\/[^/]+\/api\/collections\/storage_[^/]+\/records/,
-          handler: 'StaleWhileRevalidate',
+          //
+          // NetworkFirst, not StaleWhileRevalidate. SWR looked right — a list
+          // is cheap to be slightly stale about — but it silently broke every
+          // write. After a create, nuxt-query invalidates and refetches; the
+          // worker answers that refetch from cache *immediately* and only then
+          // revalidates, so the app renders the pre-write list and the fresh
+          // one lands in the cache where nothing reads it. Posting a comment
+          // and watching it not appear until a reload is the same bug as a new
+          // box missing from the index. The e2e suite could never catch it:
+          // `serviceWorkers: 'block'` means the tests never run the worker.
+          //
+          // Network-first keeps the offline read — it falls back to cache, and
+          // the 3s timeout covers a connection that is present but useless —
+          // while making an online read always agree with the database.
+          handler: 'NetworkFirst',
           method: 'GET',
           options: {
             cacheName: 'pb-api-storage',
+            networkTimeoutSeconds: 3,
             cacheableResponse: { statuses: [0, 200] },
             plugins: [
               {

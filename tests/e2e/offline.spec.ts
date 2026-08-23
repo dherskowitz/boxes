@@ -1,7 +1,13 @@
 import { expect, test } from '@playwright/test'
+import { authedPb, createBox, createItem, throwawayBoxes } from './helpers'
 
 // These tests exist to prove the service worker caches — it must run here.
 test.use({ storageState: 'tests/e2e/.auth/dana.json', serviceWorkers: 'allow' })
+
+// Nothing here touches a seeded record: the write test builds its own box and
+// item and hands them to the shared teardown, which runs in `afterEach` so a
+// hard-killed test still cleans up. Comments go with the item on cascade.
+const throwaway = throwawayBoxes()
 
 test('a previously-viewed box still opens with no network', async ({ page, context }) => {
   // Prime the cache while online.
@@ -48,4 +54,30 @@ test('a write attempted offline says it needs connectivity', async ({ page, cont
   await expect(page.getByRole('button', { name: 'Create box' })).toBeEnabled()
 
   await context.setOffline(false)
+})
+
+// The service worker is what makes this file worth having, and it is also
+// where the app's worst class of bug lives: a cached read served back to the
+// refetch a write just triggered. Every other spec runs with
+// `serviceWorkers: 'block'`, so none of them can see it.
+//
+// This was real. `pb-api-storage` used StaleWhileRevalidate, so posting a
+// comment invalidated the query, the worker answered the refetch from cache,
+// and the new comment did not appear until the page was reloaded — while the
+// fresh copy sat in the cache with nothing reading it.
+test('a write is visible immediately, not on the next reload', async ({ page }) => {
+  const pb = await authedPb()
+  const box = await createBox(pb, { title: 'Loft insulation offcuts' })
+  throwaway.push(box.id)
+  const item = await createItem(pb, { boxId: box.id, title: 'Two rolls, part used' })
+
+  await page.goto(`/item/${item.id}`)
+  await expect(page.getByTestId('comment-input')).toBeVisible()
+
+  const text = 'Checked against the paper copy'
+  await page.getByTestId('comment-input').fill(text)
+  await page.getByTestId('comment-submit').click()
+
+  // No reload between the write and this assertion — that is the whole test.
+  await expect(page.getByTestId('comment-thread').getByText(text)).toBeVisible()
 })
