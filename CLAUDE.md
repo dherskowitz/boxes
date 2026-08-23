@@ -160,6 +160,7 @@ pnpm test:e2e    # playwright, boots and stops its own dev server
 - Clear the service worker before switching between `pnpm dev` and `pnpm preview:offline` — both serve on `localhost:3000` and a worker is registered per origin, so the dev worker's cached `/` shell gets served to the build and every `@vite`/`@fs` request fails.
 - Offline reads cannot be verified under `pnpm dev` — the dev service worker precaches only `/` and its navigation allowlist is `/^\/$/`. Verify by hand against a build: see `docs/testing-offline.md`.
 - Use realistic seed data — real box and item names, long titles, empty lists. Never "Test User" or lorem ipsum. Titles are labels — what you would write on the side with a marker; anything longer belongs in `description`. `pb-seed.py` attaches real photographs to named records (`BOX_PHOTOS` / `ITEM_PHOTOS`), downloaded once into `scripts/.photo-cache/` and falling back to a generated placeholder per photo when there is no network — `--fake-photos` forces the placeholders. "Navy wool peacoat" and "Empty spare box" are deliberately left bare, because tests assert the empty states on them.
+- The Nuxt DevTools launcher is a fixed overlay at the bottom centre of the viewport, exactly where the nav pill's scan button sits at 412px. `playwright.config.ts` sets `E2E=1` and `nuxt.config.ts` disables devtools on it; without that every tap on that button times out.
 
 ## Ask before you assume
 

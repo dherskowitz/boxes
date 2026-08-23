@@ -1,7 +1,11 @@
 // https://nuxt.com/docs/api/configuration/nuxt-config
 export default defineNuxtConfig({
   compatibilityDate: '2025-07-15',
-  devtools: { enabled: true },
+  // Off under Playwright. The DevTools launcher is a fixed overlay at the
+  // bottom centre of the viewport — which, at the 412px mobile size the suite
+  // runs at, sits exactly on top of the nav pill's scan button and swallows
+  // the click. Dev-only chrome; real users never see it.
+  devtools: { enabled: process.env.E2E !== '1' },
   ssr: false,
 
   modules: [

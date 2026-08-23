@@ -33,6 +33,8 @@ export default defineConfig({
   },
   webServer: {
     command: `pnpm dev --host 127.0.0.1 --port ${PORT}`,
+    // Suppresses the Nuxt DevTools launcher — see nuxt.config.ts.
+    env: { E2E: '1' },
     url: BASE,
     timeout: 120_000,
     reuseExistingServer: !process.env.CI
