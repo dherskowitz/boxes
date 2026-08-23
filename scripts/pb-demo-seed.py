@@ -15,9 +15,8 @@ Best used against its own instance so it cannot disturb the test fixture:
 
 Local only, and idempotent — it wipes what it owns, then rebuilds.
 
-Usage: python3 scripts/pb-demo-seed.py <url> [--no-photos] [--backdate]
+Usage: python3 scripts/pb-demo-seed.py <url> [--no-photos] [--fake-photos] [--backdate]
 """
-import io
 import json
 import os
 import random
@@ -26,6 +25,9 @@ import sys
 import urllib.error
 import urllib.parse
 import urllib.request
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from pb_photos import make_photo, multipart, real_photo  # noqa: E402
 from datetime import datetime, timedelta, timezone
 
 PASSWORD = "storagedev123"
@@ -200,47 +202,6 @@ def wipe(base, token, collection, filter_expr=None):
             call(base, f"/collections/{collection}/records/{record['id']}", token, method="DELETE")
 
 
-def make_photo(label: str, tint: tuple[int, int, int]) -> bytes:
-    """A small labelled JPEG standing in for a real photo.
-
-    Generated rather than downloaded so the seeder needs no network and raises
-    no licensing questions. Deliberately small — the app compresses uploads
-    client-side and this path bypasses that, so keeping them modest here keeps
-    the seed fast and the offline image cache realistic.
-    """
-    from PIL import Image, ImageDraw
-    w, h = 800, 600
-    img = Image.new("RGB", (w, h), tint)
-    d = ImageDraw.Draw(img)
-    # A lighter panel so the label stays readable against any tint.
-    d.rectangle([40, h // 2 - 70, w - 40, h // 2 + 70], fill=(247, 245, 240))
-    text = label if len(label) <= 42 else label[:39] + "..."
-    d.text((60, h // 2 - 10), text, fill=(23, 28, 32))
-    d.text((60, h // 2 + 20), "demo photo", fill=(120, 120, 120))
-    buf = io.BytesIO()
-    img.save(buf, format="JPEG", quality=70)
-    return buf.getvalue()
-
-
-def multipart(fields: dict, files: list[tuple[str, str, bytes]]) -> tuple[bytes, str]:
-    """Minimal multipart/form-data encoder — PocketBase file uploads cannot be JSON."""
-    boundary = "----pbdemo" + os.urandom(8).hex()
-    out = io.BytesIO()
-    for key, value in fields.items():
-        for v in (value if isinstance(value, list) else [value]):
-            out.write(f"--{boundary}\r\n".encode())
-            out.write(f'Content-Disposition: form-data; name="{key}"\r\n\r\n'.encode())
-            out.write(f"{v}\r\n".encode())
-    for key, filename, blob in files:
-        out.write(f"--{boundary}\r\n".encode())
-        out.write(f'Content-Disposition: form-data; name="{key}"; filename="{filename}"\r\n'.encode())
-        out.write(b"Content-Type: image/jpeg\r\n\r\n")
-        out.write(blob)
-        out.write(b"\r\n")
-    out.write(f"--{boundary}--\r\n".encode())
-    return out.getvalue(), f"multipart/form-data; boundary={boundary}"
-
-
 def backdate(project: str, months: int) -> None:
     """Spread `created` over the past N months by editing SQLite directly.
 
@@ -297,6 +258,10 @@ def main():
         raise SystemExit(f"refusing to seed a non-local instance: {root}")
 
     photos = "--no-photos" not in flags
+    # Real photographs by default — the demo set exists to be looked at.
+    # `--fake-photos` keeps the generated placeholders, and a failed download
+    # falls back to them per photo rather than aborting the seed.
+    real = photos and "--fake-photos" not in flags
     base = root + "/api"
     rng = random.Random(SEED)
 
@@ -341,6 +306,16 @@ def main():
     print(f"  {len(TAGS)} tags")
 
     boxes, items_made, photos_made, comments_made = [], 0, 0, 0
+    downloaded = 0
+
+    def photo(key: str, label: str, tint: tuple[int, int, int]) -> bytes:
+        """A real photograph where one can be had, a generated one otherwise."""
+        nonlocal downloaded
+        blob = real_photo(key) if real else None
+        if blob is None:
+            return make_photo(label, tint)
+        downloaded += 1
+        return blob
     qr_seen = set()
     # Roughly three boxes per category, so titles repeat with a distinguishing
     # suffix the way a real collection does ("Kids clothes, age 2-4", box 2 of 3).
@@ -369,7 +344,7 @@ def main():
         tint = (rng.randint(30, 90), rng.randint(40, 100), rng.randint(50, 110))
         files = []
         if photos and index % 3 != 2:
-            files.append(("images", f"{qr}-cover.jpg", make_photo(label, tint)))
+            files.append(("images", f"{qr}-cover.jpg", photo(f"box:{qr}", label, tint)))
             photos_made += 1
         body, ctype = multipart(fields, files)
         box = call(base, "/collections/storage_boxes/records", token,
@@ -390,11 +365,17 @@ def main():
                          if t in tags] if tag_names else [],
             }
             wants_photo = rng.random() < 0.4
+            # Some items carry a small set, so the detail gallery has something
+            # to page through rather than one picture on every record. Drawn
+            # whether or not photos are on, so the flags cannot shift the stream.
+            shots = rng.choice([1, 1, 1, 2, 3])
             item_tint = (rng.randint(40, 120), rng.randint(40, 120), rng.randint(40, 120))
             item_files = []
             if photos and wants_photo:
-                item_files.append(("images", "item.jpg", make_photo(item_name, item_tint)))
-                photos_made += 1
+                for n in range(shots):
+                    item_files.append(("images", f"item-{n + 1}.jpg",
+                                       photo(f"item:{qr}:{item_name}:{n}", item_name, item_tint)))
+                    photos_made += 1
             ibody, ictype = multipart(item_fields, item_files)
             item = call(base, "/collections/storage_items/records", token,
                         body=ibody, headers={"Content-Type": ictype})
@@ -419,7 +400,8 @@ def main():
         grants += 1
 
     print(f"  {len(boxes)} boxes, {items_made} items, {comments_made} comments, "
-          f"{grants} editor grants, {photos_made} photos")
+          f"{grants} editor grants, {photos_made} photos "
+          f"({downloaded} real, {photos_made - downloaded} generated)")
 
     if "--backdate" in flags:
         project = os.environ.get("COMPOSE_PROJECT", "storage-app")

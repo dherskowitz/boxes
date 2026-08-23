@@ -33,3 +33,7 @@ tests/e2e/.auth/
 pb_data
 .worktrees/
 /SLICE-REPORT.md
+__pycache__/
+
+# Downloaded demo photos — re-fetched on demand, never committed.
+scripts/.photo-cache/

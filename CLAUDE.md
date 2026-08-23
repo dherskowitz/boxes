@@ -159,7 +159,7 @@ pnpm test:e2e    # playwright, boots and stops its own dev server
 - Playwright blocks service workers (`playwright.config.ts`); only `offline.spec.ts` allows them. The dev service worker bypasses `page.route` stubs and serves a stale list back to a test that just wrote.
 - Clear the service worker before switching between `pnpm dev` and `pnpm preview:offline` — both serve on `localhost:3000` and a worker is registered per origin, so the dev worker's cached `/` shell gets served to the build and every `@vite`/`@fs` request fails.
 - Offline reads cannot be verified under `pnpm dev` — the dev service worker precaches only `/` and its navigation allowlist is `/^\/$/`. Verify by hand against a build: see `docs/testing-offline.md`.
-- Use realistic seed data — real box and item names, long titles, empty lists. Never "Test User" or lorem ipsum.
+- Use realistic seed data — real box and item names, long titles, empty lists. Never "Test User" or lorem ipsum. Titles are labels — what you would write on the side with a marker; anything longer belongs in `description`. `pb-seed.py` attaches real photographs to named records (`BOX_PHOTOS` / `ITEM_PHOTOS`), downloaded once into `scripts/.photo-cache/` and falling back to a generated placeholder per photo when there is no network — `--fake-photos` forces the placeholders. "Navy wool peacoat" and "Empty spare box" are deliberately left bare, because tests assert the empty states on them.
 
 ## Ask before you assume
 

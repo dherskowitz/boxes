@@ -1,7 +1,8 @@
 # Demo data
 
 `scripts/pb-demo-seed.py` builds a collection big enough to actually look at:
-**40 boxes, 388 items, 14 tags, ~90 comments, 8 editor grants, ~180 photos**,
+**40 boxes, ~389 items, 14 tags, ~95 comments, 8 editor grants, ~290 real
+photographs**,
 across six accounts.
 
 It exists because the test fixture is deliberately tiny and exact. With 5 boxes
@@ -44,7 +45,8 @@ If you would rather use the main instance, that works too — just run `pnpm see
 ```bash
 pnpm seed                     # the e2e fixture, on 8090
 pnpm demo:up                  # start the demo instance on 8099
-pnpm seed:demo                # everything, with photos
+pnpm seed:demo                # everything, with real photographs
+pnpm seed:demo --fake-photos  # generated placeholders, no network
 pnpm seed:demo --no-photos    # faster, no images
 pnpm demo:down                # stop it and drop its volume
 
@@ -109,10 +111,32 @@ stay correct. `marcus` is an admin so tag deletion — which requires `owner` or
 
 ## Photos
 
-Generated, not downloaded: a tinted background with the box or item name drawn
-on it. No network, no licensing questions, and they are visually distinct enough
-to tell apart in a gallery.
+Real photographs, from [Lorem Picsum](https://picsum.photos) — Unsplash's
+library served without an API key. Unsplash's own API would match subjects to
+box titles, but it wants a client id and rate-limits a demo app to 50 requests
+an hour against the 290 this seed asks for.
 
-They are uploaded directly, which bypasses the client-side compression the app
-applies to real uploads — so they are kept small (800×600, quality 70) to keep
-the seed fast and the offline image cache realistic.
+So the pictures are **not subject-matched**: a box of winter coats may show a
+mountain. What they are is real photography at real dimensions, which is the
+point — generated placeholders told you nothing about how a gallery, a
+thumbnail or the offline image cache actually behaves.
+
+Each id is derived from the box or item, so a record keeps the same picture
+across re-seeds and a screenshot diff stays meaningful. Some items carry two or
+three shots so the detail gallery has something to page through.
+
+Downloads are cached under `scripts/.photo-cache/` (git-ignored, ~15 MB). The
+first seed needs a connection and takes about 90 seconds; every later one reads
+from disk and works with the network off. A download that fails falls back to a
+generated placeholder for that one photo rather than failing the seed — the run
+prints the split, so `288 real, 4 generated` tells you four ids had been
+withdrawn upstream.
+
+`--fake-photos` forces the generated placeholders everywhere: a tinted
+background with the record's name drawn on it. That is also what the e2e fixture
+(`pb-seed.py`) uses, and it stays that way deliberately — an e2e run must not
+depend on a network fetch.
+
+Either kind is uploaded directly, which bypasses the client-side compression the
+app applies to real uploads — so they are kept small (800×600) to keep the seed
+fast and the offline image cache realistic.
