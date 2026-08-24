@@ -3,3 +3,6 @@ allowBuilds:
   vue-demi: false
   unrs-resolver: true
   maplibre-gl: false
+  # wrangler's runtime, only used by `wrangler dev`. Deploys upload the built
+  # assets and never start it, so there is nothing to build here.
+  workerd: false

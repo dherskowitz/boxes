@@ -1,0 +1,29 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "storage-boxes",
+  "compatibility_date": "2026-08-24",
+
+  // No `main`: the app is `ssr: false`, so `pnpm build` emits a directory of
+  // static files and there is no server code to run. An assets-only Worker
+  // serves them, which is why nothing here declares a script or bindings.
+  //
+  // `single-page-application` is what makes a cold load of /box/seedbox1 work:
+  // the router lives in the client bundle, so any path that is not a file on
+  // disk has to come back as the app shell with a 200. `nitro.prerender.routes`
+  // in nuxt.config.ts is what puts that shell at .output/public/index.html --
+  // without it `ssr: false` emits no HTML at all and every deep link 404s.
+  //
+  // The PocketBase URL is not here. It is read from
+  // `runtimeConfig.public.pocketbaseUrl`, which Nuxt bakes into the client
+  // bundle at build time, so NUXT_PUBLIC_POCKETBASE_URL has to be set for the
+  // *build* -- in the Workers Builds environment, not as a Worker var. A var
+  // set here would never be read by anything.
+  "assets": {
+    "directory": ".output/public",
+    "not_found_handling": "single-page-application"
+  },
+
+  "observability": {
+    "enabled": true
+  }
+}
