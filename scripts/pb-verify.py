@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Compare a live PocketBase against pb_migrations/, without changing anything.
 
-Usage: python3 scripts/pb-verify.py [base_url] [--emit-fix]
+Usage: python3 scripts/pb-verify.py [base_url] [--emit-fix] [--apply]
 
 PocketBase records every migration it has applied, so a file that has already
 run once will never run again — an instance that ended up missing a collection
@@ -10,13 +10,18 @@ missing it, silently, and the app only says so when someone opens the screen
 that reads it.
 
 Reports missing collections, view queries that have drifted from the file,
-fields the file has and the instance does not, and rule mismatches. Read-only:
-it never writes to the instance. Exits non-zero when anything differs.
+fields the file has and the instance does not, and rule mismatches. Writes
+nothing unless asked. Exits non-zero when anything differs.
 
-With --emit-fix it also writes a follow-up migration carrying just the
-collections that differ, copied from the baseline file rather than retyped.
-Nothing is applied here: review the file, commit it, and let the instance run
-it on its next restart.
+--emit-fix writes a follow-up migration carrying just the collections that
+differ, copied from the baseline file rather than retyped: review it, commit
+it, and let the instance run it on its next restart.
+
+--apply creates the absent ones over the API instead, for an instance you
+cannot easily redeploy or restart. It only ever creates what is missing — a
+collection that exists but has drifted is reported and left alone, since
+patching one in place is how an instance stops matching the file everyone
+else runs. Use the migration for those.
 
 Superuser credentials come from PB_ADMIN_EMAIL / PB_ADMIN_PASSWORD when set,
 otherwise it prompts.
@@ -54,10 +59,12 @@ def expected():
     return out
 
 
-def post(url, payload):
+def post(url, payload, token=None):
     req = urllib.request.Request(url, data=json.dumps(payload).encode(), method="POST",
                                  headers={"Content-Type": "application/json",
                                           "User-Agent": UA})
+    if token:
+        req.add_header("Authorization", token)
     with urllib.request.urlopen(req) as r:
         return json.load(r)
 
@@ -133,10 +140,29 @@ migrate((app) => {{
     return path
 
 
+def apply_missing(base, token, absent):
+    """Create the absent collections over the API.
+
+    Order follows the baseline, which puts each view after the tables it
+    selects from — a view whose sources are not there yet is rejected.
+    """
+    for want in absent:
+        try:
+            post(f"{base}/api/collections", want, token)
+            print(f"    created {want['name']}")
+        except urllib.error.HTTPError as e:
+            print(f"    FAILED {want['name']}: {e.code} {e.read().decode()[:300]}")
+            return False
+    return True
+
+
 def main():
-    argv = [a for a in sys.argv[1:] if a != "--emit-fix"]
+    argv = [a for a in sys.argv[1:] if not a.startswith("--")]
+    wants_apply = "--apply" in sys.argv
     wants_fix = "--emit-fix" in sys.argv
     base = (argv[0] if argv else "http://localhost:8090").rstrip("/")
+    if wants_apply:
+        print(f"--apply: absent collections will be CREATED on {base}")
     print(f"PocketBase: {base}")
 
     identity = os.environ.get("PB_ADMIN_EMAIL") or input("Superuser email: ")
@@ -149,11 +175,13 @@ def main():
 
     live = {c["name"]: c for c in get(f"{base}/api/collections?perPage=500", token)["items"]}
 
-    stale = []
+    stale, absent = [], []
     for want in expected():
         found = differences(want, live.get(want["name"]))
         if found:
             stale.append(want)
+            if want["name"] not in live:
+                absent.append(want)
             print(f"\n  {want['name']}")
             for line in found:
                 print(f"    - {line}")
@@ -166,8 +194,17 @@ def main():
               "follow-up one.")
         if wants_fix:
             print(f"Wrote {emit_fix(stale)} - review it, commit it, restart the instance.")
-        else:
-            print("Re-run with --emit-fix to write that migration.")
+        if wants_apply and absent:
+            print(f"\n  Creating {len(absent)} absent collection(s):")
+            if not apply_missing(base, token, absent):
+                sys.exit(1)
+            drifted = [c["name"] for c in stale if c not in absent]
+            if drifted:
+                print("  Left alone, still differing: " + ", ".join(drifted))
+            print("  Re-run without --apply to confirm.")
+        if not wants_fix and not wants_apply:
+            print("Re-run with --emit-fix to write that migration, or --apply to "
+                  "create the absent ones over the API.")
         sys.exit(1)
     print("\nEverything the migration defines is present and matches.")
 
