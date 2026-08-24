@@ -3,9 +3,12 @@ import PocketBase from 'pocketbase'
 import { searchFilter } from '~/queries/search'
 
 describe('searchFilter', () => {
-  it('matches box title only, excluding archived boxes by default', () => {
+  it('matches box title, description and location, excluding archived boxes by default', () => {
+    // Title alone sent "garage" back empty while the answer sat in the record.
+    // `SearchResult.reason` names which field hit, so a box never appears
+    // without a visible explanation for why.
     expect(searchFilter('coats', { kind: 'box' })).toEqual({
-      raw: 'status = {:status} && title ~ {:search}',
+      raw: 'status = {:status} && (title ~ {:search} || description ~ {:search} || location ~ {:search})',
       params: { status: 'active', search: 'coats' }
     })
   })

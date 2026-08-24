@@ -2,8 +2,98 @@ import type { StorageBox, StorageItem } from '~/types/pocketbase'
 import type { PbFilter, SearchFilters } from '~/queries/keys'
 import { keys, PER_PAGE, tagClauses } from '~/queries/keys'
 
+/**
+ * Why a box is in the results.
+ *
+ * A box can surface for something the reader cannot see on its row — a word in
+ * its description, or a word on an item sealed inside it — and a row with no
+ * visible reason reads as a bug in the search. `title` carries no label: the
+ * highlighted title is the explanation.
+ */
+export type BoxMatchReason =
+  | { kind: 'title' }
+  | { kind: 'description' }
+  | { kind: 'location' }
+  | { kind: 'items', count: number }
+  /** Matched something in a field we cannot point at — see `reasonFor`. */
+  | { kind: 'unknown' }
+
 /** Discriminated so a template can never render an item as a box, or vice versa. */
-export type SearchResult = { kind: 'box', box: StorageBox } | { kind: 'item', item: StorageItem }
+export type SearchResult =
+  | { kind: 'box', box: StorageBox, reason: BoxMatchReason }
+  | { kind: 'item', item: StorageItem }
+
+function contains(haystack: string, needle: string): boolean {
+  return haystack.toLowerCase().includes(needle)
+}
+
+/**
+ * Which visible field of a box the term was found in.
+ *
+ * Ordered by what the reader can actually see: the title is already
+ * highlighted on the row, the location is printed under it, and the
+ * description is neither — so it is named last of the three.
+ *
+ * `unknown` is not a fallthrough for tidiness. `description` is an `editor`
+ * field holding HTML, so a term can match markup that appears nowhere in the
+ * rendered text (searching "div" is the easy example). Saying "matched
+ * description" then sends someone hunting for a word that is not there;
+ * saying nothing is honest about a match we cannot point at.
+ */
+function reasonFor(box: StorageBox, needle: string): BoxMatchReason {
+  if (contains(box.title, needle)) return { kind: 'title' }
+  if (contains(box.location, needle)) return { kind: 'location' }
+  if (contains(stripHtml(box.description), needle)) return { kind: 'description' }
+  return { kind: 'unknown' }
+}
+
+/**
+ * Fold the two collection queries into one ordered result list.
+ *
+ * Boxes whose *items* matched are surfaced here rather than by a third query:
+ * the item search already returns each item with its box expanded, so the box
+ * and the count are both in hand. A box that matched directly keeps its own
+ * reason — that is about the box, not about something inside it — and is never
+ * listed twice.
+ *
+ * Every matching item stays in the list even when its box is also shown. The
+ * two rows answer different questions: which box to open, and whether the
+ * thing is really in there.
+ *
+ * Pure so it tests without `$pb`.
+ */
+export function searchResults(
+  boxes: StorageBox[],
+  items: StorageItem[],
+  term: string
+): SearchResult[] {
+  const needle = term.trim().toLowerCase()
+  const direct = boxes.map(box => ({ kind: 'box' as const, box, reason: reasonFor(box, needle) }))
+  const seen = new Set(boxes.map(box => box.id))
+
+  // Insertion-ordered, so the surfaced boxes follow the order their first
+  // matching item came back in rather than an arbitrary one.
+  const viaItems = new Map<string, { box: StorageBox, count: number }>()
+  for (const item of items) {
+    const box = item.expand?.box
+    // An item whose relation was not expanded gives nothing to link to. It
+    // still belongs in the item list; it just cannot surface a box row.
+    if (!box || seen.has(box.id)) continue
+    const entry = viaItems.get(box.id)
+    if (entry) entry.count += 1
+    else viaItems.set(box.id, { box, count: 1 })
+  }
+
+  return [
+    ...direct,
+    ...[...viaItems.values()].map(({ box, count }) => ({
+      kind: 'box' as const,
+      box,
+      reason: { kind: 'items' as const, count }
+    })),
+    ...items.map(item => ({ kind: 'item' as const, item }))
+  ]
+}
 
 /**
  * Build a search filter template for one collection, for use with
@@ -40,7 +130,12 @@ export function searchFilter(
   const params: Record<string, unknown> = { search: trimmed, status: 'active', ...tags.params }
   const clauses
     = opts.kind === 'box'
-      ? ['status = {:status}', 'title ~ {:search}']
+      // Title, description and location. A box is often findable only by
+      // where it is ("garage") or by a note on it, and matching the title
+      // alone made those searches come back empty while the answer was
+      // sitting in the record. `SearchResult.reason` names which one hit, so
+      // a row never surfaces without a visible explanation.
+      ? ['status = {:status}', '(title ~ {:search} || description ~ {:search} || location ~ {:search})']
       // Items carry no status of their own — exclusion of an archived box's
       // items travels through the relation field, which PocketBase resolves
       // via a join.
@@ -89,10 +184,13 @@ export function useSearch(filters: Ref<SearchFilters>) {
     enabled: hasTerm
   })
 
-  const results = computed<SearchResult[]>(() => [
-    ...(boxes.data.value?.items ?? []).map(box => ({ kind: 'box' as const, box })),
-    ...(items.data.value?.items ?? []).map(item => ({ kind: 'item' as const, item }))
-  ])
+  const results = computed<SearchResult[]>(() =>
+    searchResults(
+      boxes.data.value?.items ?? [],
+      items.data.value?.items ?? [],
+      filters.value.term
+    )
+  )
 
   // Both queries are disabled together, so isPending only reflects an actual
   // in-flight fetch when there is a term — TanStack reports isPending: true

@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import type { StorageTag } from '~/types/pocketbase'
+
 defineProps<{
   modelValue: string
   /**
@@ -16,6 +18,15 @@ const emit = defineEmits<{ 'update:modelValue': [value: string], submit: [] }>()
 const tagIds = defineModel<string[]>('tags', { default: () => [] })
 
 const filtersOpen = ref(false)
+
+// Resolved here rather than passed in: every consumer already binds `tags` as
+// ids, and `useTags()` is the shared vocabulary read the pickers all use.
+const { data: allTags } = useTags()
+const activeTags = computed(() =>
+  tagIds.value
+    .map(id => (allTags.value ?? []).find(tag => tag.id === id))
+    .filter((tag): tag is StorageTag => tag !== undefined)
+)
 
 // Unique per instance: the index and the search screen can both be mounted
 // during a client-side navigation, and two inputs sharing an id would make
@@ -97,6 +108,39 @@ function onInput(event: Event) {
         <span class="sr-only">Search</span>
       </button>
     </form>
+
+    <!-- The tags currently narrowing the list, on the header itself.
+         Everything else lives behind the filters button, but a filter you
+         cannot see is a filter you forget you set — and then the missing
+         results look like the search is broken. Each chip takes itself off;
+         Clear all takes the lot. -->
+    <div v-if="filterable && activeTags.length" class="flex flex-wrap items-center gap-1.5">
+      <span
+        v-for="tag in activeTags"
+        :key="tag.id"
+        class="sb-chip py-1.5 pr-1.5 pl-3"
+        :style="{ background: tag.color || 'var(--sb-surface)', color: readableInk(tag.color || '#ffffff') }"
+        :data-testid="`active-filter-${tag.name}`"
+      >
+        {{ tag.name }}
+        <button
+          type="button"
+          class="cursor-pointer opacity-70 hover:opacity-100"
+          :aria-label="`Stop filtering by ${tag.name}`"
+          @click="tagIds = tagIds.filter(id => id !== tag.id)"
+        >
+          <UIcon name="i-lucide-x" class="size-3.5" aria-hidden="true" />
+        </button>
+      </span>
+      <button
+        type="button"
+        class="cursor-pointer px-2 py-1.5 text-xs font-extrabold text-white/85 hover:text-white"
+        data-testid="clear-all-filters"
+        @click="tagIds = []"
+      >
+        Clear all
+      </button>
+    </div>
 
     <USlideover v-if="filterable" v-model:open="filtersOpen" side="bottom" title="Filters">
       <template #body>

@@ -9,6 +9,30 @@ const props = defineProps<{ results: SearchResult[], term?: string }>()
 type BoxResult = Extract<SearchResult, { kind: 'box' }>
 type ItemResult = Extract<SearchResult, { kind: 'item' }>
 
+/**
+ * The line under a box's title: where it is, and — when the title is not the
+ * answer — what did match.
+ *
+ * A box can surface for a word in its description or on an item sealed inside
+ * it, and a row with no visible reason reads as a bug in the search rather
+ * than as a hit. `title` and `unknown` add nothing: one is already highlighted
+ * above, and the other is a match we cannot honestly point at.
+ */
+function subtitle(result: BoxResult): string {
+  const { location } = result.box
+  const reason = result.reason
+  const why
+    = reason.kind === 'description'
+      ? 'matched description'
+      : reason.kind === 'location'
+        ? 'matched location'
+        : reason.kind === 'items'
+          ? `matched ${reason.count} ${reason.count === 1 ? 'item' : 'items'}`
+          : ''
+
+  return [location, why].filter(Boolean).join(' · ')
+}
+
 const boxes = computed(() => props.results.filter((r): r is BoxResult => r.kind === 'box'))
 const items = computed(() => props.results.filter((r): r is ItemResult => r.kind === 'item'))
 
@@ -65,7 +89,7 @@ function highlight(text: string): { text: string, match: boolean }[] {
               :class="part.match ? 'rounded-[5px] bg-[oklch(0.88_0.14_92)] px-[3px] text-[#2a1f06]' : ''"
             >{{ part.text }}</span>
           </span>
-          <span v-if="result.box.location" class="sb-on-tint text-xs font-bold">{{ result.box.location }}</span>
+          <span v-if="subtitle(result)" class="sb-on-tint text-xs font-bold" data-testid="box-match-reason">{{ subtitle(result) }}</span>
         </span>
         <UIcon name="i-lucide-chevron-right" class="size-[18px] shrink-0" :style="{ color: 'var(--sb-muted)' }" aria-hidden="true" />
       </NuxtLink>
