@@ -1,6 +1,11 @@
 import { expect, test } from '@playwright/test'
 import type { StorageTag } from '~/types/pocketbase'
-import { authedPbAs } from './helpers'
+import { authedPbAs, throwawayTags } from './helpers'
+
+// Colour editing is asserted against a tag this spec owns: the seeded five are
+// read by the reports counts and by other spec files.
+const COLOURED = 'loft insulation'
+const throwawayTagNames = throwawayTags()
 
 test.describe('as an owner', () => {
   test.use({ storageState: 'tests/e2e/.auth/dana.json' })
@@ -67,6 +72,25 @@ test.describe('as an owner', () => {
     await page.getByLabel('Name').fill('kitchen')
     await page.getByRole('button', { name: 'Save' }).click()
     await expect(page.getByText('kitchen', { exact: true })).toBeVisible()
+  })
+
+  test('can change a tag colour, and it is what comes back from the API', async ({ page }) => {
+    const pb = await authedPbAs('dana@local.test')
+    throwawayTagNames.push(COLOURED)
+    await pb.collection('storage_tags').create({ name: COLOURED, color: '#2563eb' })
+
+    await page.goto('/tags')
+    await page.getByTestId(`rename-tag-${COLOURED}`).click()
+    await page.getByLabel('Colour').fill('#dc2626')
+    await page.getByRole('button', { name: 'Save' }).click()
+
+    // Back to the read-only row, so the save resolved rather than errored.
+    await expect(page.getByTestId(`rename-tag-${COLOURED}`)).toBeVisible()
+
+    const saved = await pb.collection('storage_tags').getFirstListItem<StorageTag>(
+      pb.filter('name = {:name}', { name: COLOURED })
+    )
+    expect(saved.color).toBe('#dc2626')
   })
 
   test('sees the delete control', async ({ page }) => {

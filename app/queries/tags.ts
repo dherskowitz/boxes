@@ -45,24 +45,27 @@ export function useCreateTag() {
   })
 }
 
-export function useRenameTag() {
+export function useUpdateTag() {
   const { $pb } = useNuxtApp()
   const queryClient = useQueryClient()
 
   return useMutation({
-    // Only `name` is sent. Tags are a shared, curated vocabulary rather than
-    // something a single user owns: `created_by` is optional on
+    // Only the editable fields are sent. Tags are a shared, curated vocabulary
+    // rather than something a single user owns: `created_by` is optional on
     // storage_tags, and the update rule is just "any enabled member" — no
     // `:isset` check at all (that pattern applies to boxes and items, not
     // tags). Omitting it here is still correct, just for a different reason.
-    mutationFn: ({ id, name }: { id: string, name: string }) => {
+    mutationFn: ({ id, name, color }: { id: string, name: string, color: string }) => {
       assertOnline()
-      return $pb.collection('storage_tags').update<StorageTag>(id, { name: normalizeTagName(name) })
+      return $pb.collection('storage_tags').update<StorageTag>(id, {
+        name: normalizeTagName(name),
+        color
+      })
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: keys.tags.all })
       // A tag is a relation on boxes and items, and both expand it — their
-      // cached copies still carry the old label until refetched.
+      // cached copies still carry the old label and colour until refetched.
       queryClient.invalidateQueries({ queryKey: keys.boxes.all })
       queryClient.invalidateQueries({ queryKey: keys.items.all })
     }

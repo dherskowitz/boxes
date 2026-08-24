@@ -13,8 +13,8 @@ const kitchen: StorageTag = {
   created_by: 'u_dana'
 }
 
-const { renameMutateAsync, deleteMutateAsync } = vi.hoisted(() => ({
-  renameMutateAsync: vi.fn(),
+const { updateMutateAsync, deleteMutateAsync } = vi.hoisted(() => ({
+  updateMutateAsync: vi.fn(),
   deleteMutateAsync: vi.fn()
 }))
 
@@ -36,42 +36,62 @@ mockNuxtImport('useAuth', () => {
   return () => ({ role: ref('owner') })
 })
 
-mockNuxtImport('useRenameTag', () => {
-  return () => ({ mutateAsync: renameMutateAsync, isPending: ref(false) })
+mockNuxtImport('useUpdateTag', () => {
+  return () => ({ mutateAsync: updateMutateAsync, isPending: ref(false) })
 })
 
 mockNuxtImport('useDeleteTag', () => {
   return () => ({ mutateAsync: deleteMutateAsync, isPending: ref(false) })
 })
 
-describe('tags.vue — inline rename', () => {
+describe('tags.vue — inline edit', () => {
   afterEach(() => {
-    renameMutateAsync.mockClear()
+    updateMutateAsync.mockClear()
     deleteMutateAsync.mockClear()
   })
 
   it('refuses to save a rename that normalises to empty, and does not call the API', async () => {
     const wrapper = await mountSuspended(TagsPage)
     await wrapper.find('[data-testid="rename-tag-kitchen"]').trigger('click')
-    await wrapper.find('input').setValue('   ')
+    await wrapper.find('input[type="text"]').setValue('   ')
     // Submit the form, not the button: happy-dom does not synthesise a submit
     // event from a click on a type="submit" button, and the rename row is a
     // UForm now — clicking Save here would assert nothing.
     await wrapper.find('form').trigger('submit')
     await vi.waitFor(() => expect(wrapper.text()).toContain('Tag name cannot be empty.'))
 
-    expect(renameMutateAsync).not.toHaveBeenCalled()
+    expect(updateMutateAsync).not.toHaveBeenCalled()
   })
 
   it('saves a normalised, non-empty rename', async () => {
-    renameMutateAsync.mockResolvedValueOnce({ ...kitchen, name: 'kitchenware' })
+    updateMutateAsync.mockResolvedValueOnce({ ...kitchen, name: 'kitchenware' })
     const wrapper = await mountSuspended(TagsPage)
     await wrapper.find('[data-testid="rename-tag-kitchen"]').trigger('click')
-    await wrapper.find('input').setValue('  Kitchenware  ')
+    await wrapper.find('input[type="text"]').setValue('  Kitchenware  ')
     await wrapper.find('form').trigger('submit')
 
     await vi.waitFor(() =>
-      expect(renameMutateAsync).toHaveBeenCalledWith({ id: 't_kitchen', name: 'kitchenware' })
+      expect(updateMutateAsync).toHaveBeenCalledWith({
+        id: 't_kitchen',
+        name: 'kitchenware',
+        color: '#16a34a'
+      })
+    )
+  })
+
+  it('saves a colour chosen on the same row, alongside the name', async () => {
+    updateMutateAsync.mockResolvedValueOnce({ ...kitchen, color: '#dc2626' })
+    const wrapper = await mountSuspended(TagsPage)
+    await wrapper.find('[data-testid="rename-tag-kitchen"]').trigger('click')
+    await wrapper.find('input[type="color"]').setValue('#dc2626')
+    await wrapper.find('form').trigger('submit')
+
+    await vi.waitFor(() =>
+      expect(updateMutateAsync).toHaveBeenCalledWith({
+        id: 't_kitchen',
+        name: 'kitchen',
+        color: '#dc2626'
+      })
     )
   })
 })

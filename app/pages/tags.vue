@@ -12,7 +12,7 @@ const { data: boxFill } = useBoxFill()
 const { data: tagUsageRows } = useTagUsage()
 const totals = computed(() => reportTotals(boxFill.value, tagUsageRows.value))
 
-const renameTag = useRenameTag()
+const updateTag = useUpdateTag()
 const deleteTag = useDeleteTag()
 
 const canDelete = computed(() => role.value === 'owner' || role.value === 'admin')
@@ -28,35 +28,40 @@ function usageLabel(tagId: string): string {
 }
 
 const editingId = ref('')
-const rename = reactive({ name: '' })
-const renameError = ref('')
+const edit = reactive({ name: '', color: '' })
+const editError = ref('')
 
-function startRename(tag: StorageTag) {
+// `<input type="color">` has no empty state — it falls back to black, which
+// reads as a colour someone chose. A tag seeded or created without one starts
+// at the app accent instead, in hex because the input takes nothing else.
+const NO_COLOUR = '#7c3aed'
+
+function startEdit(tag: StorageTag) {
   editingId.value = tag.id
-  rename.name = tag.name
-  renameError.value = ''
+  edit.name = tag.name
+  edit.color = tag.color || NO_COLOUR
+  editError.value = ''
 }
 
-function validateRename(): FormError[] {
+function validateEdit(): FormError[] {
   // Normalised, not raw: '   ' and '' are the same empty name to the API.
-  if (!normalizeTagName(rename.name)) {
+  if (!normalizeTagName(edit.name)) {
     return [{ name: 'name', message: 'Tag name cannot be empty.' }]
   }
   return []
 }
 
-function cancelRename() {
+function cancelEdit() {
   editingId.value = ''
 }
 
-async function saveRename(tag: StorageTag) {
-  renameError.value = ''
-  const name = normalizeTagName(rename.name)
+async function saveEdit(tag: StorageTag) {
+  editError.value = ''
   try {
-    await renameTag.mutateAsync({ id: tag.id, name })
+    await updateTag.mutateAsync({ id: tag.id, name: normalizeTagName(edit.name), color: edit.color })
     editingId.value = ''
   } catch (e) {
-    renameError.value = pbError(e)
+    editError.value = pbError(e)
   }
 }
 
@@ -144,18 +149,29 @@ async function performDelete() {
         >
           <UForm
             v-if="editingId === tag.id"
-            :state="rename"
-            :validate="validateRename"
+            :state="edit"
+            :validate="validateEdit"
             class="flex flex-col gap-2.5"
-            @submit="saveRename(tag)"
+            @submit="saveEdit(tag)"
           >
             <div class="flex items-center gap-2.5">
+              <!-- The swatch is the control: the native picker sits invisible
+                   on top of it, so the thing you tap is the colour you are
+                   changing rather than a separate field beside it. -->
               <span
-                class="size-[30px] shrink-0 rounded-[10px]"
-                :style="{ background: tag.color || 'var(--sb-accent)' }"
-              />
+                class="relative size-[30px] shrink-0 overflow-hidden rounded-[10px]"
+                :style="{ background: edit.color }"
+              >
+                <label class="sr-only" :for="`tag-colour-${tag.id}`">Colour</label>
+                <input
+                  :id="`tag-colour-${tag.id}`"
+                  v-model="edit.color"
+                  type="color"
+                  class="absolute inset-0 size-full cursor-pointer opacity-0"
+                >
+              </span>
               <UFormField label="Name" name="name" class="min-w-0 flex-1" :ui="{ label: 'sr-only' }">
-                <UInput v-model="rename.name" class="w-full font-extrabold" />
+                <UInput v-model="edit.name" class="w-full font-extrabold" />
               </UFormField>
             </div>
             <div class="flex items-center justify-between gap-3">
@@ -163,8 +179,8 @@ async function performDelete() {
                 Updates {{ usageLabel(tag.id) }}
               </span>
               <div class="flex gap-1">
-                <UButton variant="ghost" color="neutral" size="sm" @click="cancelRename">Cancel</UButton>
-                <UButton type="submit" size="sm" :loading="renameTag.isPending.value">Save</UButton>
+                <UButton variant="ghost" color="neutral" size="sm" @click="cancelEdit">Cancel</UButton>
+                <UButton type="submit" size="sm" :loading="updateTag.isPending.value">Save</UButton>
               </div>
             </div>
           </UForm>
@@ -188,7 +204,7 @@ async function performDelete() {
               variant="ghost"
               color="neutral"
               :data-testid="`rename-tag-${tag.name}`"
-              @click="startRename(tag)"
+              @click="startEdit(tag)"
             >
               <span class="sr-only">Rename {{ tag.name }}</span>
             </UButton>
@@ -206,7 +222,7 @@ async function performDelete() {
         </li>
       </ul>
 
-      <UAlert v-if="renameError" color="error" :description="renameError" />
+      <UAlert v-if="editError" color="error" :description="editError" />
     </div>
 
     <DeleteConfirm
