@@ -93,7 +93,7 @@ function onError(error: EmittedError) {
           <span
             class="absolute -bottom-11 left-1/2 -translate-x-1/2 rounded-full px-3.5 py-1.5 text-xs font-extrabold whitespace-nowrap"
             :style="{ background: 'oklch(0.86 0.17 88)', color: '#2a1f06' }"
-          >hold ~20 cm away</span>
+          >hold ~8 in away</span>
         </div>
       </div>
 
