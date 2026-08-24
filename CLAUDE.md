@@ -72,7 +72,7 @@ python3 scripts/pb-snapshot.py <url>   # rewrites the migration from a live inst
 git diff pb_migrations/                # should show only the change you made
 ```
 
-The snapshot strips per-instance timestamps, so a non-empty diff always means a real schema change. Never hand-edit the generated migration.
+The snapshot strips per-instance timestamps, so a non-empty diff always means a real schema change. Never hand-edit the generated migration. An instance never re-runs a migration it already applied, so one that ended up short of the baseline stays short of it silently: `python3 scripts/pb-verify.py <url> [--emit-fix]` diffs a live instance against `pb_migrations/` and writes the follow-up migration for whatever differs. An admin-UI schema edit also makes PocketBase write its own `_deleted_` / `_updated_` migration into that instance's `pb_migrations/` — never commit one; it replays the edit everywhere.
 
 ## The loop
 
