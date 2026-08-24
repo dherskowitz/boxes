@@ -29,3 +29,17 @@ test('refuses a code that is not eight characters rather than routing to a 404',
   await expect(page.getByText('A box code is eight letters and digits.')).toBeVisible()
   await expect(page).toHaveURL('/scan')
 })
+
+// The scanner carries its own offline line under the viewfinder, in its own
+// dark colours. The layout's notice on top of that said the same thing twice
+// and pushed the viewfinder down the screen.
+test('shows only its own offline hint, not the layout banner', async ({ page, context }) => {
+  await page.goto('/scan')
+  await expect(page.getByTestId('qr-scanner')).toBeVisible()
+
+  await context.setOffline(true)
+  await expect(page.getByTestId('scan-offline-hint')).toBeVisible()
+  await expect(page.getByTestId('offline-banner')).toBeHidden()
+
+  await context.setOffline(false)
+})

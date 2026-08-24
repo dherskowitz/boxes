@@ -3,8 +3,10 @@ import { QrcodeCapture } from 'vue-qrcode-reader'
 import type { FormError } from '@nuxt/ui'
 
 // Full-bleed and dark: the camera is the screen, so the shell's nav pill and
-// padded body would only sit on top of it.
-definePageMeta({ nav: false })
+// padded body would only sit on top of it. The layout's offline notice goes
+// too — this screen has its own, in its own colours, under the viewfinder, and
+// the pair of them said the same thing twice.
+definePageMeta({ nav: false, offlineBanner: false })
 
 const { isOnline } = useOnline()
 

@@ -15,6 +15,7 @@ const membershipErrorMessage = computed(() => pbError(membershipError.value))
 // actions instead. Pages opt out with `definePageMeta({ nav: false })`.
 const route = useRoute()
 const showNav = computed(() => route.meta.nav !== false)
+const showOffline = computed(() => route.meta.offlineBanner !== false)
 </script>
 
 <template>
@@ -27,7 +28,7 @@ const showNav = computed(() => route.meta.nav !== false)
            the directory gate is showing an error, which offline is exactly
            when it does. In flow, so it never covers the page's own header —
            see the component. -->
-      <OfflineBanner />
+      <OfflineBanner v-if="showOffline" />
 
       <!-- The nudge stays fixed: it is a one-off prompt rather than a state,
            and reflowing the page under the reader's thumb to announce it is
