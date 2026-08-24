@@ -51,6 +51,25 @@ const filters = computed<SearchFilters>(() => ({ term: activeTerm.value, tagIds:
 
 const { results, hasTerm, isPending, isError, error } = useSearch(filters)
 const errorMessage = computed(() => (error.value ? pbError(error.value) : ''))
+
+// The empty state names the tags doing the narrowing rather than saying "the
+// selected tags": the fix for a filtered-away search is to drop one of them,
+// and the copy has to say which. Ids come from the URL, names from the shared
+// vocabulary read every picker already uses.
+const { data: allTags } = useTags()
+const activeTagNames = computed(() =>
+  tagIds.value
+    .map(id => (allTags.value ?? []).find(tag => tag.id === id)?.name)
+    .filter((name): name is string => name !== undefined)
+)
+
+// Split so only the names are emphasised: "with the **kids** filter on", not
+// a bolded run that swallows the noun.
+const tagList = computed(() => {
+  const names = activeTagNames.value
+  return names.length < 2 ? names.join('') : `${names.slice(0, -1).join(', ')} and ${names.at(-1)}`
+})
+const filterWord = computed(() => (activeTagNames.value.length === 1 ? 'filter' : 'filters'))
 </script>
 
 <template>
@@ -105,11 +124,12 @@ const errorMessage = computed(() => (error.value ? pbError(error.value) : ''))
         <div class="flex flex-col gap-2">
           <p class="sb-display text-[22px]">Nothing matched</p>
           <p class="text-sm" :style="{ color: 'var(--sb-muted)' }">
-            <template v-if="tagIds.length > 0">
-              No results for "{{ activeTerm }}" with the selected tags.
+            <template v-if="tagList">
+              No boxes or items for &ldquo;{{ activeTerm }}&rdquo; with the
+              <strong class="font-extrabold">{{ tagList }}</strong> {{ filterWord }} on.
             </template>
             <template v-else>
-              No results for "{{ activeTerm }}".
+              No boxes or items for &ldquo;{{ activeTerm }}&rdquo;.
             </template>
           </p>
         </div>

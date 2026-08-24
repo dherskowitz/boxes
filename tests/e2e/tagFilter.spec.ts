@@ -186,6 +186,11 @@ test('a search whose filters exclude everything reads differently from a term th
   await page.getByTestId(`tag-filter-${UNUSED}`).click()
   await applyFilters(page)
   await expect(page.getByTestId('search-no-results-filtered')).toBeVisible()
+  // Names the tag that is doing the narrowing, not "the selected tags": the
+  // fix is to drop that one filter, and the copy has to say which.
+  await expect(page.getByTestId('search-no-results-filtered')).toContainText(
+    `No boxes or items for “Winter coats” with the ${UNUSED} filter on.`
+  )
   await expect(page.getByTestId('search-no-results')).toBeHidden()
 
   // The three original states must survive the fourth being added.
