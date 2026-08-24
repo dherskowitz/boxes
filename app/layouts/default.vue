@@ -23,19 +23,20 @@ const showNav = computed(() => route.meta.nav !== false)
          and gives each page its own saturated header block, so the shell owns
          only the states that gate every page. -->
     <main class="flex-1">
-      <!-- Fixed, over the page rather than above it: both are transient, and
-           pushing the header down every time one appears reflows the whole
-           screen under the reader's thumb. Above the membership branches on
-           purpose — they stay visible even when the directory gate is showing
-           an error, which offline is exactly when it does.
+      <!-- Above the membership branches on purpose: it stays visible even when
+           the directory gate is showing an error, which offline is exactly
+           when it does. In flow, so it never covers the page's own header —
+           see the component. -->
+      <OfflineBanner />
 
-           `pointer-events-none` on the strip so the empty space beside a
-           banner never eats a tap meant for the page; each banner turns
-           pointer events back on for itself. -->
+      <!-- The nudge stays fixed: it is a one-off prompt rather than a state,
+           and reflowing the page under the reader's thumb to announce it is
+           worse than floating it. `pointer-events-none` on the strip so the
+           empty space beside it never eats a tap meant for the page; the
+           prompt turns pointer events back on for itself. -->
       <div
         class="pointer-events-none fixed inset-x-0 top-0 z-50 flex flex-col gap-2 px-[1.375rem] pt-[max(env(safe-area-inset-top),0.75rem)] [&>*]:pointer-events-auto"
       >
-        <OfflineBanner />
         <InstallPrompt />
       </div>
 

@@ -28,6 +28,14 @@ test('a previously-viewed box still opens with no network', async ({ page, conte
   await expect(page.getByText('Navy wool peacoat')).toBeVisible()
   await expect(page.getByTestId('offline-banner')).toBeVisible()
 
+  // In flow, not over the page. As a fixed overlay the banner landed on top of
+  // each screen's own header — the back chevron, the kebab, the search field —
+  // so the notice about not being able to edit was itself the thing in the way.
+  const banner = await page.getByTestId('offline-banner').boundingBox()
+  const header = await page.locator('header.sb-header').first().boundingBox()
+  if (!banner || !header) throw new Error('offline banner and page header must both be on screen')
+  expect(banner.y + banner.height).toBeLessThanOrEqual(header.y)
+
   await context.setOffline(false)
 })
 
