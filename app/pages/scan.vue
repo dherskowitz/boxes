@@ -27,6 +27,18 @@ function validateCode(): FormError[] {
   return []
 }
 
+// The code a scan resolved to, which swaps the camera for the confirmation.
+// Null means the camera is live.
+const hit = ref<string | null>(null)
+
+function onHit(qrId: string) {
+  hit.value = qrId
+}
+
+function onScanAgain() {
+  hit.value = null
+}
+
 async function onCodeSubmit() {
   await navigateTo(`/box/${normalizeCode(codeState.code)}`)
 }
@@ -44,12 +56,17 @@ async function onPhotoDetect(codes: { rawValue: string }[]) {
     return
   }
   photoError.value = ''
-  await navigateTo(`/box/${qrId}`)
+  // Same confirmation as a live scan: a code read off a photo is more likely
+  // to be the wrong box, not less.
+  hit.value = qrId
 }
 </script>
 
 <template>
   <div class="flex min-h-screen flex-col text-[#f4f2ec]" :style="{ background: '#0f0e11' }">
+    <ScanHit v-if="hit" :qr-id="hit" @again="onScanAgain" />
+
+    <template v-else>
     <div class="flex items-center justify-between px-5 pt-[max(env(safe-area-inset-top),0.75rem)] pb-1">
       <UButton
         to="/boxes"
@@ -63,7 +80,7 @@ async function onPhotoDetect(codes: { rawValue: string }[]) {
       <span class="size-10" aria-hidden="true" />
     </div>
 
-    <QrScanner />
+    <QrScanner @hit="onHit" />
 
     <div class="relative flex flex-col gap-3.5 px-[1.375rem] pt-4 pb-[calc(1.75rem+env(safe-area-inset-bottom))]">
       <div
@@ -103,6 +120,7 @@ async function onPhotoDetect(codes: { rawValue: string }[]) {
         </label>
       </div>
     </div>
+    </template>
 
     <UModal v-model:open="codeOpen" title="Enter box code">
       <template #body>

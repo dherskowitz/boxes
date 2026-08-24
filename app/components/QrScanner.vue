@@ -4,6 +4,13 @@ import type { EmittedError } from 'vue-qrcode-reader'
 
 type ScannerState = 'scanning' | 'invalid' | 'permission-denied' | 'no-camera' | 'error'
 
+/**
+ * The scanner reports the code; it does not decide what happens next. The page
+ * owns that, because the confirmation step it shows before navigating is a
+ * screen, not a scanner concern.
+ */
+const emit = defineEmits<{ hit: [qrId: string] }>()
+
 const state = ref<ScannerState>('scanning')
 const errorMessage = ref('')
 
@@ -24,7 +31,8 @@ function onDetect(codes: { rawValue: string }[]) {
     state.value = 'invalid'
     return
   }
-  navigateTo(`/box/${qrId}`)
+  state.value = 'scanning'
+  emit('hit', qrId)
 }
 
 function onError(error: EmittedError) {

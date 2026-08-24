@@ -68,7 +68,8 @@ export const keys = {
   },
   comments: {
     all: ['comments'] as const,
-    byItem: (itemId: string) => ['comments', 'item', itemId] as const
+    byItem: (itemId: string) => ['comments', 'item', itemId] as const,
+    countByBox: (boxId: string) => ['comments', 'box-count', boxId] as const
   },
   tags: {
     all: ['tags'] as const,

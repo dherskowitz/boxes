@@ -22,6 +22,29 @@ export function useComments(itemId: Ref<string>) {
 }
 
 /**
+ * How many comments the whole box has, across all of its items.
+ *
+ * Comments hang off items, not boxes, so this counts through the relation:
+ * PocketBase resolves `item.box` as a join, the same way the item search
+ * filters on `box.status`. `perPage: 1` because only `totalItems` is read —
+ * the rows themselves are never rendered here.
+ *
+ * Used by the scan confirmation, which is the one screen that has to be fast
+ * on a bad connection, so it is a count and not a fetch.
+ */
+export function useBoxCommentCount(boxId: Ref<string>) {
+  const { $pb } = useNuxtApp()
+  return useQuery({
+    queryKey: computed(() => keys.comments.countByBox(boxId.value)),
+    queryFn: () =>
+      $pb.collection('storage_comments').getList(1, 1, {
+        filter: $pb.filter('item.box = {:boxId}', { boxId: boxId.value })
+      }),
+    enabled: computed(() => boxId.value !== '')
+  })
+}
+
+/**
  * Build a minimal update payload.
  *
  * The update rule is `@request.body.user:isset = false` — the request is
