@@ -94,7 +94,7 @@ async function onPhotoDetect(codes: { rawValue: string }[]) {
           <UIcon name="i-lucide-wifi-off" class="size-5" aria-hidden="true" />
         </span>
         <p class="text-[13px] leading-snug text-[#d6d4cd]">
-          Offline in the garage? Scanning still works — you'll see whatever this device has already loaded.
+          Offline? Scanning still works. You'll see whatever this device has already loaded.
         </p>
       </div>
 
