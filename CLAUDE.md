@@ -39,8 +39,7 @@ instance to a clean migrated state.
 
 ### Running an isolated stack (parallel worktrees)
 
-Each worktree needs its own PocketBase and dev server, or concurrent
-`pnpm test:e2e` runs collide. Pick a slot number per worktree, then:
+Each worktree needs its own PocketBase and dev server, or concurrent `pnpm test:e2e` runs collide. Pick a slot number per worktree, then:
 
 ```bash
 PB_PORT=809<n> docker compose -p storage-<slot> up -d   # e.g. slot 1 -> PB_PORT=8091
@@ -50,8 +49,7 @@ E2E_PORT=300<n> pnpm test:e2e
 docker compose -p storage-<slot> down -v   # when done
 ```
 
-The `-p` project name is what isolates the `pb_data` volume — a distinct
-`PB_PORT` alone still shares one database across worktrees.
+The `-p` project name is what isolates the `pb_data` volume — a distinct `PB_PORT` alone still shares one database across worktrees.
 
 Bigger dataset for looking at the app — 40 boxes, 388 items, photos:
 
@@ -127,6 +125,7 @@ pnpm test:e2e    # playwright, boots and stops its own dev server
 - Give every `UAlert` an explicit `color` (`error` / `warning` / `neutral` / `info`). The default is the primary colour, so an uncoloured error renders green.
 - Every form is a `UForm` with a plain `validate` returning `FormError[]`, one `UFormField name="…"` per field. No validation library, and no native `required` — its bubble fires before `validate` and the field message never shows. Never disable a submit button to stand in for validation; disable it only while the mutation is pending.
 - Screenshot any screen you build and look at it before calling it done. Check the narrow viewport for clipped text and content under the safe area.
+- Every icon is compiled into the client bundle at build time — `icon.clientBundle.scan` over `app/**/*.{vue,ts}`, with `fallbackToApi: false`. Nuxt Icon's default scan only sees names written as literals in a template, so the nav pill's and the kebab's were missed and fetched from `api.iconify.design` per page: nothing renders offline, and a third party learns which screens get opened. `tests/e2e/icons.spec.ts` asserts both halves and fails if the config is reverted.
 - Declare the design tokens with `@theme static`, never a bare `@theme`. Tailwind v4 emits only the custom properties its own utilities reference, and Nuxt UI builds `--ui-bg-inverted`, `--ui-border-accented` and friends off the neutral scale from a stylesheet Tailwind never scans — tree-shaken away, they resolve to empty and every default component silently loses its background and border.
 - Slot classes set in `app/app.config.ts` are **prepended** to each component's own, so anything Nuxt UI also sets (its 1px `ring`, its radius) still wins. Set only properties it leaves alone; use the per-instance `:ui` prop to override one it does.
 - A full-screen form's Save sits in `<FormHeader>`, outside the `<form>`: give `UForm` an `id` and the button `:form` plus `type="submit"`, so it runs the same `validate`. Never emit straight from a second button — that is a create path with no validation. An action on a `.sb-header` a box colour scopes takes `var(--c-on, var(--sb-amber))`; fixed amber disappears on the warmer stops.

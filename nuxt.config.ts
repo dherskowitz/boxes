@@ -19,6 +19,34 @@ export default defineNuxtConfig({
 
   css: ['~/assets/css/main.css'],
 
+  icon: {
+    // Never reach for the Iconify API, on the client or the server. The
+    // bundle below is the whole icon set, and an icon missing from it should
+    // render as nothing rather than quietly become a third-party request from
+    // a phone in a garage. Defaults to true, which is how this went unnoticed.
+    fallbackToApi: false,
+
+    // Every icon the app uses is compiled into the client bundle at build
+    // time. Without this, Nuxt Icon bundles only what its default scan finds
+    // and fetches the rest from `api.iconify.design` at runtime — a
+    // third-party round trip per page that renders nothing at all on a phone
+    // with no signal, which is the case this app is built for.
+    //
+    // The default scan misses any icon it cannot see as a literal in a `.vue`
+    // template: the nav pill's entries, the box kebab's menu items and the
+    // layout toggle all name theirs inside `<script setup>` arrays. Widening
+    // the glob to the whole of `app/` picks those up too.
+    clientBundle: {
+      scan: {
+        globInclude: ['app/**/*.{vue,ts}']
+      },
+      // 57 lucide glyphs is roughly 14KB. The default 256KB cap would fail the
+      // build silently-ish rather than fall back, so it is stated here to make
+      // the headroom visible.
+      sizeLimitKb: 256
+    }
+  },
+
   runtimeConfig: {
     public: {
       // NUXT_PUBLIC_POCKETBASE_URL
