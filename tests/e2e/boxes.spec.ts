@@ -38,8 +38,35 @@ test('shows the empty state when there are no active boxes', async ({ page }) =>
   await page.route('**/api/collections/storage_boxes/records?*', route =>
     route.fulfill({ json: { page: 1, perPage: 30, totalItems: 0, totalPages: 0, items: [] } })
   )
+  // The header counts come from the report view, not the list — both have to
+  // be empty for the screen to be the first-run one.
+  await page.route('**/api/collections/storage_report_box_fill/records*', route =>
+    route.fulfill({ json: { page: 1, perPage: 500, totalItems: 0, totalPages: 0, items: [] } })
+  )
   await page.goto('/boxes')
+
   await expect(page.getByTestId('box-list-empty-active')).toBeVisible()
+  await expect(page.getByText('No boxes yet')).toBeVisible()
+  // "0 boxes / 0 things" is a state, not a headline figure.
+  await expect(page.getByText('0 boxes')).toBeHidden()
+
+  // Nothing to search, and one create button rather than two.
+  await expect(page.getByTestId('search-input')).toBeHidden()
+  await expect(page.getByLabel('New box')).toBeHidden()
+  await expect(page.getByRole('link', { name: 'Create your first box' })).toBeVisible()
+  await expect(page.getByRole('link', { name: 'I have a QR label to scan' })).toBeVisible()
+})
+
+test('the empty state offers the scanner for labels printed ahead of time', async ({ page }) => {
+  await page.route('**/api/collections/storage_boxes/records?*', route =>
+    route.fulfill({ json: { page: 1, perPage: 30, totalItems: 0, totalPages: 0, items: [] } })
+  )
+  await page.route('**/api/collections/storage_report_box_fill/records*', route =>
+    route.fulfill({ json: { page: 1, perPage: 500, totalItems: 0, totalPages: 0, items: [] } })
+  )
+  await page.goto('/boxes')
+  await page.getByRole('link', { name: 'I have a QR label to scan' }).click()
+  await expect(page).toHaveURL('/scan')
 })
 
 // The primary action lands on the label, not the box. A box exists to have a

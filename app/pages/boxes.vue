@@ -22,19 +22,43 @@ const { data: boxFill } = useBoxFill()
 const { data: tagUsage } = useTagUsage()
 const totals = computed(() => reportTotals(boxFill.value, tagUsage.value))
 
+const { member } = useAuth()
+
+// Nothing at all, as opposed to nothing matching a filter. Gated on the query
+// having answered: `reportTotals(undefined, …)` is also zero, and flashing
+// "No boxes yet" at someone with forty of them while the view loads is worse
+// than showing nothing for a beat.
+const isEmpty = computed(() => boxFill.value !== undefined && totals.value.boxes === 0)
+
 </script>
 
 <template>
   <div>
-    <AppHeader eyebrow="Your storage">
+    <AppHeader :eyebrow="isEmpty ? undefined : 'Your storage'">
       <template #title>
-        <p class="sb-display text-[34px]">
+        <!-- A count of zero is not a headline figure, it is a state. -->
+        <p v-if="isEmpty" class="sb-display text-[30px]">No boxes yet</p>
+        <p v-else class="sb-display text-[34px]">
           {{ totals.boxes }} {{ totals.boxes === 1 ? 'box' : 'boxes' }} <br>
           {{ totals.items }} {{ totals.items === 1 ? 'thing' : 'things' }}
         </p>
       </template>
 
-      <SearchBar v-model="searchTerm" v-model:tags="tagIds" filterable @submit="onSearchSubmit">
+      <template v-if="isEmpty" #actions>
+        <NuxtLink to="/more" aria-label="Your account">
+          <UserAvatar :name="member?.name" />
+        </NuxtLink>
+      </template>
+
+      <!-- No search pill with nothing to search: it would be the largest
+           control on the screen and every query it ran would come back empty. -->
+      <SearchBar
+        v-if="!isEmpty"
+        v-model="searchTerm"
+        v-model:tags="tagIds"
+        filterable
+        @submit="onSearchSubmit"
+      >
         <template #filters>
           <UCheckbox
             v-model="showArchived"
@@ -51,7 +75,7 @@ const totals = computed(() => reportTotals(boxFill.value, tagUsage.value))
       <BoxSection
         status="active"
         heading="Active"
-        empty-message="Name it, drop in a couple of photos, then stick its QR label on the real thing."
+        empty-message="Name it, say where it lives, then stick its QR label on the real thing."
         :tag-ids="tagIds"
       />
 
@@ -66,7 +90,11 @@ const totals = computed(() => reportTotals(boxFill.value, tagUsage.value))
 
     <!-- Sits above the nav pill, on the same right edge, as the design draws
          it: the pill is where you go, this is what you make. -->
+    <!-- Hidden while the list is empty: the empty state already leads with
+         "Create your first box", and two buttons for one action makes the
+         reader work out whether they differ. -->
     <UButton
+      v-if="!isEmpty"
       to="/box/new"
       aria-label="New box"
       icon="i-lucide-plus"

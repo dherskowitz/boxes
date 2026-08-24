@@ -42,7 +42,13 @@ const errorMessage = computed(() => (error.value ? pbError(error.value) : ''))
 
 <template>
   <section :data-testid="`box-section-${status}`" class="flex flex-col gap-3">
-    <h2 class="sb-mono" :style="{ color: 'var(--sb-muted)' }">{{ heading }}</h2>
+    <!-- A heading over an empty section labels nothing. Kept while loading so
+         it does not appear, vanish and come back as the query settles. -->
+    <h2
+      v-if="isPending || boxes.length > 0"
+      class="sb-mono"
+      :style="{ color: 'var(--sb-muted)' }"
+    >{{ heading }}</h2>
 
     <div
       v-if="isPending"
@@ -67,7 +73,7 @@ const errorMessage = computed(() => (error.value ? pbError(error.value) : ''))
     <div
       v-else-if="boxes.length === 0"
       :data-testid="`box-list-empty-${status}`"
-      class="flex flex-col items-center gap-5 px-2 py-10 text-center"
+      class="flex min-h-[58vh] flex-col items-center justify-center gap-5 px-2 py-10 text-center"
     >
       <div
         class="flex size-30 items-center justify-center rounded-[2.25rem] text-white"
