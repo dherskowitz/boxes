@@ -6,7 +6,7 @@ import type { FormError } from '@nuxt/ui'
 // padded body would only sit on top of it. The layout's offline notice goes
 // too — this screen has its own, in its own colours, under the viewfinder, and
 // the pair of them said the same thing twice.
-definePageMeta({ nav: false, offlineBanner: false })
+definePageMeta({ nav: false, rail: false, offlineBanner: false })
 
 const { isOnline } = useOnline()
 

@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { useMediaQuery } from '@vueuse/core'
+
 const {
   isMember,
   isMembershipPending,
@@ -14,12 +16,20 @@ const membershipErrorMessage = computed(() => pbError(membershipError.value))
 // own back control, and the design gives that space to the screen's own
 // actions instead. Pages opt out with `definePageMeta({ nav: false })`.
 const route = useRoute()
-const showNav = computed(() => route.meta.nav !== false)
+const isDesktop = useMediaQuery(DESKTOP)
+// `nav: false` exists because the floating pill covers the thumb zone a detail
+// screen needs for its own actions — box detail's Add item sits exactly there.
+// A side rail takes no thumb zone, so at desktop width those screens keep their
+// navigation. `rail: false` is the opt-out for a screen that must stay
+// chromeless at every width: the scanner.
+const showNav = computed(() =>
+  isDesktop.value ? route.meta.rail !== false : route.meta.nav !== false
+)
 const showOffline = computed(() => route.meta.offlineBanner !== false)
 </script>
 
 <template>
-  <div class="flex min-h-screen flex-col" :class="{ 'sb-page': showNav }">
+  <div class="flex min-h-screen flex-col" :class="{ 'sb-page sb-shell-offset': showNav }">
     <!-- No top bar: v2 moves navigation into the floating pill at the bottom
          and gives each page its own saturated header block, so the shell owns
          only the states that gate every page. -->

@@ -184,6 +184,61 @@ body {
   padding-bottom: calc(9rem + env(safe-area-inset-bottom));
 }
 
+/* Padded content region under a full-bleed `.sb-header`. */
+.sb-body {
+  padding: 1rem 1.375rem 0;
+}
+
+/* --- Tablet and desktop --------------------------------------------------
+   Additive only: the phone layout is the base and nothing here fires below
+   1024px. Keep this width in step with `DESKTOP` in app/utils/breakpoints.ts
+   — the rail and these measures are two halves of one layout.
+
+   Unlayered, like `.sb-body` and `.sb-page` above, and deliberately so: an
+   unlayered rule beats a Tailwind utility, which means `lg:max-w-2xl` on a
+   `.sb-body` element silently loses. That is why the narrower measures below
+   are classes rather than utilities.
+------------------------------------------------------------------------- */
+@media (min-width: 1024px) {
+  /* The header block stays full-bleed — its colour is the "you are here"
+     signal and should span the region — but its contents are capped, so a
+     title does not start 900px from the body text underneath it. Reaches
+     AppHeader, FormHeader and box detail's hand-rolled header in one rule. */
+  .sb-header > * {
+    max-width: 72rem;
+    margin-inline: auto;
+  }
+
+  .sb-body {
+    max-width: 72rem;
+    margin-inline: auto;
+    padding-inline: 2rem;
+  }
+
+  /* Narrower measures, for screens that read as one column of prose rather
+     than a board of cards. Same specificity as `.sb-body`, declared after it,
+     so a page opts in by adding the class and nothing else. */
+  .sb-measure-article {
+    max-width: 48rem;
+    margin-inline: auto;
+  }
+
+  .sb-measure-form {
+    max-width: 42rem;
+    margin-inline: auto;
+  }
+
+  /* 9rem of it clears the floating pill. There is no pill at this width. */
+  .sb-page {
+    padding-bottom: 3rem;
+  }
+
+  /* Gutter for the fixed rail. */
+  .sb-shell-offset {
+    padding-left: 15rem;
+  }
+}
+
 @media print {
   .sb-nav,
   .sb-header,
@@ -194,14 +249,18 @@ body {
   .sb-page {
     padding-bottom: 0;
   }
+
+  .sb-body {
+    max-width: none;
+    margin-inline: 0;
+  }
+
+  .sb-shell-offset {
+    padding-left: 0;
+  }
 }
 
 @keyframes sb-pulse {
   0%, 100% { opacity: 0.3; }
   50% { opacity: 1; }
-}
-
-/* Padded content region under a full-bleed `.sb-header`. */
-.sb-body {
-  padding: 1rem 1.375rem 0;
 }

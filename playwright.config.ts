@@ -43,7 +43,26 @@ export default defineConfig({
     { name: 'setup', testMatch: /.*\.setup\.ts/ },
     {
       name: 'mobile',
+      // The desktop layout gets its own project and its own viewport. Run this
+      // spec at 412px and it asserts a rail exists exactly where it must not.
+      testIgnore: /responsive\.spec\.ts/,
       use: { ...devices['Pixel 7'] },
+      dependencies: ['setup']
+    },
+    {
+      name: 'desktop',
+      testMatch: /responsive\.spec\.ts/,
+      // An explicit viewport rather than devices['Desktop Chrome']: that preset
+      // carries `channel: 'chrome'`, which needs real Chrome installed rather
+      // than the bundled Chromium every other project uses. `isMobile` and
+      // `hasTouch` must be turned off by hand, because the top-level `use`
+      // spreads Pixel 7 and those would otherwise be inherited as true.
+      use: {
+        viewport: { width: 1280, height: 800 },
+        isMobile: false,
+        hasTouch: false,
+        deviceScaleFactor: 1
+      },
       dependencies: ['setup']
     }
   ]
