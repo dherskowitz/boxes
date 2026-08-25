@@ -101,14 +101,14 @@ async function onDelete() {
 
 <template>
   <div :style="vars">
-    <div v-if="isPending" data-testid="item-loading" class="sb-body flex flex-col gap-4 pt-6">
+    <div v-if="isPending" data-testid="item-loading" class="sb-body sb-measure-article flex flex-col gap-4 pt-6">
       <USkeleton class="h-8 w-64" />
       <USkeleton class="h-40 w-full" />
     </div>
 
-    <UAlert v-else-if="isError" color="error" class="m-[1.375rem]" :description="errorMessage" />
+    <UAlert v-else-if="isError" color="error" class="sb-measure-article m-[1.375rem]" :description="errorMessage" />
 
-    <div v-else-if="item" class="pb-10">
+    <div v-else-if="item" class="sb-measure-article pb-10">
       <!-- Colour-washed hero: the item's first photo where there is one, the
            box's colour where there is not. Either way the block is the box's
            colour, which is what carries the "this lives in that box" cue. -->

@@ -137,3 +137,26 @@ test.describe('promoted actions', () => {
     expect(position).toBe('static')
   })
 })
+
+test.describe('article and form measures', () => {
+  test('reads an item as one narrow column', async ({ page }) => {
+    await page.setViewportSize({ width: 2560, height: 1200 })
+    await page.goto('/items')
+    await page.getByTestId('item-card').first().click()
+    const article = page.locator('.sb-measure-article')
+    await expect(article).toBeVisible()
+    const box = await article.boundingBox()
+    if (!box) throw new Error('expected a measured article region')
+    expect(box.width).toBeLessThanOrEqual(768) // 48rem
+  })
+
+  test('holds a form to a form-sized measure', async ({ page }) => {
+    await page.setViewportSize({ width: 2560, height: 1200 })
+    await page.goto('/box/new')
+    const form = page.locator('.sb-measure-form')
+    await expect(form).toBeVisible()
+    const box = await form.boundingBox()
+    if (!box) throw new Error('expected a measured form region')
+    expect(box.width).toBeLessThanOrEqual(672) // 42rem
+  })
+})

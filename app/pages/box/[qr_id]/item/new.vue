@@ -70,7 +70,7 @@ async function submit(payload: ItemPayload, andRepeat: boolean) {
       :pending="createPending"
     />
 
-    <div class="sb-body pb-8">
+    <div class="sb-body sb-measure-form pb-8">
       <div v-if="isPending" data-testid="new-item-loading" class="flex flex-col gap-4 pt-2">
         <USkeleton v-for="n in 4" :key="n" class="h-12 w-full rounded-xl" />
       </div>

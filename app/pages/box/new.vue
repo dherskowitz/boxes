@@ -41,7 +41,7 @@ async function submit(payload: NewBoxPayload, andPrint: boolean) {
       :pending="isPending"
     />
 
-    <div class="sb-body pb-8">
+    <div class="sb-body sb-measure-form pb-8">
       <BoxForm
         :form-id="FORM_ID"
         :pending="isPending"
