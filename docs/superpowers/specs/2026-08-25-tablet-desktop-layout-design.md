@@ -156,8 +156,9 @@ The spec asserts, at 1280 and again after resizing to 768:
 4. **Each card fits its frame.** Asserting the document does not scroll
    sideways proves nothing when a container clips — `overflow: hidden` turns an
    overflow bug into a silent cropping bug and the check still passes. The
-   assertion compares each card's `scrollWidth` against its `clientWidth`, and
-   is proven to fail with the measure reverted before it is trusted.
+   assertion compares each card's `scrollWidth` against its `clientWidth`. It
+   is a guard that passes from the start; the assertion proven to fail with
+   the measure reverted is (5).
 5. On a 2560px window, `.sb-body`'s measured width is ≤ the 72rem cap.
 
 Followed by a screenshot sweep at 768 / 1280 / 1920 across every route, looked
