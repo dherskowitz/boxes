@@ -59,3 +59,44 @@ test.describe('desktop shell', () => {
     expect(first.x).toBeGreaterThanOrEqual(rail.x + rail.width)
   })
 })
+
+test.describe('list grids', () => {
+  /** Two elements are side by side when they share a row and do not overlap. */
+  async function assertSideBySide(page: import('@playwright/test').Page, testId: string) {
+    const cards = page.getByTestId(testId)
+    await expect(cards.first()).toBeVisible()
+    const a = await cards.nth(0).boundingBox()
+    const b = await cards.nth(1).boundingBox()
+    if (!a || !b) throw new Error(`expected at least two ${testId} elements`)
+    expect(Math.abs(b.y - a.y)).toBeLessThan(2)
+    expect(b.x).toBeGreaterThanOrEqual(a.x + a.width)
+  }
+
+  test('lays boxes out side by side', async ({ page }) => {
+    await page.goto('/boxes')
+    await assertSideBySide(page, 'box-card')
+  })
+
+  test('lays items out side by side', async ({ page }) => {
+    await page.goto('/items')
+    await assertSideBySide(page, 'item-row')
+  })
+
+  test('grids at tablet width too', async ({ page }) => {
+    await page.setViewportSize(TABLET)
+    await page.goto('/boxes')
+    await assertSideBySide(page, 'box-card')
+  })
+
+  test('every card fits its frame', async ({ page }) => {
+    // Asserting the document does not scroll sideways proves nothing when a
+    // container clips: `overflow: hidden` turns an overflow bug into a silent
+    // cropping bug and the check still passes. Measure each card instead.
+    await page.goto('/boxes')
+    await expect(page.getByTestId('box-card').first()).toBeVisible()
+    const overflowing = await page
+      .getByTestId('box-card')
+      .evaluateAll(els => els.filter(el => el.scrollWidth > el.clientWidth + 1).length)
+    expect(overflowing).toBe(0)
+  })
+})

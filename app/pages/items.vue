@@ -83,7 +83,7 @@ const isFiltered = computed(() => activeTerm.value !== '' || tagIds.value.length
     </AppHeader>
 
     <div class="sb-body flex flex-col gap-4">
-      <div v-if="isPending" data-testid="items-loading" class="flex flex-col gap-2">
+      <div v-if="isPending" data-testid="items-loading" class="grid gap-2 md:grid-cols-2">
         <USkeleton v-for="n in 5" :key="n" class="h-[72px] w-full rounded-[1.25rem]" />
       </div>
 
@@ -114,7 +114,7 @@ const isFiltered = computed(() => activeTerm.value !== '' || tagIds.value.length
         </p>
       </div>
 
-      <div v-else class="flex flex-col gap-[9px]">
+      <div v-else class="grid gap-[9px] md:grid-cols-2">
         <ItemCard v-for="item in items" :key="item.id" :item="item" show-box />
       </div>
 

@@ -125,7 +125,7 @@ function onSearchSubmit() {
         <div
           v-if="isBoxesPending"
           data-testid="recent-boxes-loading"
-          class="flex flex-col gap-[11px]"
+          class="grid gap-[11px] md:grid-cols-2 xl:grid-cols-3"
         >
           <USkeleton v-for="n in 4" :key="n" class="h-[108px] w-full rounded-[1.25rem]" />
         </div>
@@ -147,7 +147,7 @@ function onSearchSubmit() {
           <UButton to="/box/new" size="xl" block icon="i-lucide-plus">Create your first box</UButton>
         </div>
 
-        <div v-else class="flex flex-col gap-[11px]">
+        <div v-else class="grid gap-[11px] md:grid-cols-2 xl:grid-cols-3">
           <BoxCard v-for="box in recentBoxes" :key="box.id" :box="box" />
         </div>
 

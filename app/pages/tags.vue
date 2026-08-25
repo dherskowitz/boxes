@@ -115,7 +115,7 @@ async function performDelete() {
     </AppHeader>
 
     <div class="sb-body flex flex-col gap-2.5">
-      <div v-if="isPending" data-testid="tags-loading" class="flex flex-col gap-2.5">
+      <div v-if="isPending" data-testid="tags-loading" class="grid gap-2.5 md:grid-cols-2">
         <USkeleton v-for="n in 3" :key="n" class="h-[62px] w-full rounded-[1.125rem]" />
       </div>
 
@@ -140,7 +140,7 @@ async function performDelete() {
         </p>
       </div>
 
-      <ul v-else class="flex flex-col gap-2.5">
+      <ul v-else class="grid gap-2.5 md:grid-cols-2">
         <li
           v-for="tag in tags ?? []"
           :key="tag.id"

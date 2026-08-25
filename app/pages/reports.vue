@@ -72,11 +72,13 @@ function retry() {
       </div>
 
       <template v-else>
-        <ReportTotals :totals="totals" />
-        <ReportItemsPerBox :box-fill="boxFill ?? []" />
-        <ReportLocations :box-fill="boxFill ?? []" />
-        <ReportTagUsage :tag-usage="tagUsage ?? []" />
-        <ReportGrowth :growth="growth ?? []" />
+        <div class="flex flex-col gap-5 lg:grid lg:grid-cols-2 lg:items-start">
+          <ReportTotals :totals="totals" class="lg:col-span-2" />
+          <ReportItemsPerBox :box-fill="boxFill ?? []" />
+          <ReportLocations :box-fill="boxFill ?? []" />
+          <ReportTagUsage :tag-usage="tagUsage ?? []" />
+          <ReportGrowth :growth="growth ?? []" />
+        </div>
       </template>
     </div>
   </div>

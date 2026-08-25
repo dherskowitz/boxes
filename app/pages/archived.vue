@@ -89,7 +89,7 @@ async function onUnarchive() {
     <div class="sb-body flex flex-col gap-3 pb-32">
       <UAlert v-if="unarchiveError" color="error" data-testid="unarchive-error" :description="unarchiveError" />
 
-      <div v-if="isPending" data-testid="archived-loading" class="flex flex-col gap-2.5">
+      <div v-if="isPending" data-testid="archived-loading" class="grid gap-2.5 md:grid-cols-2">
         <USkeleton v-for="n in 5" :key="n" class="h-[68px] w-full rounded-[1.25rem]" />
       </div>
 
@@ -139,7 +139,7 @@ async function onUnarchive() {
           </UButton>
         </div>
 
-        <ul class="flex flex-col gap-2.5">
+        <ul class="grid gap-2.5 md:grid-cols-2">
           <li
             v-for="box in boxes"
             :key="box.id"

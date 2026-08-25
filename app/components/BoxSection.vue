@@ -53,7 +53,7 @@ const errorMessage = computed(() => (error.value ? pbError(error.value) : ''))
     <div
       v-if="isPending"
       :data-testid="`box-list-loading-${status}`"
-      class="flex flex-col gap-[11px]"
+      class="grid gap-[11px] md:grid-cols-2 xl:grid-cols-3"
     >
       <USkeleton v-for="n in 6" :key="n" class="h-[108px] w-full rounded-[1.25rem]" />
     </div>
@@ -95,7 +95,7 @@ const errorMessage = computed(() => (error.value ? pbError(error.value) : ''))
       </div>
     </div>
 
-    <div v-else class="flex flex-col gap-[11px]">
+    <div v-else class="grid gap-[11px] md:grid-cols-2 xl:grid-cols-3">
       <BoxCard v-for="box in boxes" :key="box.id" :box="box" />
     </div>
 

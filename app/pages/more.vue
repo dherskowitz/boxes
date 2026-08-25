@@ -91,24 +91,26 @@ async function onSignOut() {
 
       <section v-for="section in sections" :key="section.heading" class="flex flex-col gap-2.5">
         <h2 class="sb-mono" :style="{ color: 'var(--sb-muted)' }">{{ section.heading }}</h2>
-        <NuxtLink
-          v-for="link in section.links"
-          :key="link.to"
-          :to="link.to"
-          class="sb-card flex items-center gap-3 p-3.5"
-        >
-          <span
-            class="flex size-11 shrink-0 items-center justify-center rounded-[0.875rem]"
-            :style="{ background: 'color-mix(in oklch, var(--sb-accent) 12%, var(--sb-surface))', color: 'var(--sb-accent)' }"
+        <div class="grid gap-2.5 md:grid-cols-2">
+          <NuxtLink
+            v-for="link in section.links"
+            :key="link.to"
+            :to="link.to"
+            class="sb-card flex items-center gap-3 p-3.5"
           >
-            <UIcon :name="link.icon" class="size-5" aria-hidden="true" />
-          </span>
-          <span class="flex min-w-0 flex-1 flex-col">
-            <span class="text-[15px] font-extrabold">{{ link.label }}</span>
-            <span class="text-[11px] font-bold" :style="{ color: 'var(--sb-muted)' }">{{ link.hint }}</span>
-          </span>
-          <UIcon name="i-lucide-chevron-right" class="size-[18px] shrink-0" :style="{ color: 'var(--sb-muted)' }" aria-hidden="true" />
-        </NuxtLink>
+            <span
+              class="flex size-11 shrink-0 items-center justify-center rounded-[0.875rem]"
+              :style="{ background: 'color-mix(in oklch, var(--sb-accent) 12%, var(--sb-surface))', color: 'var(--sb-accent)' }"
+            >
+              <UIcon :name="link.icon" class="size-5" aria-hidden="true" />
+            </span>
+            <span class="flex min-w-0 flex-1 flex-col">
+              <span class="text-[15px] font-extrabold">{{ link.label }}</span>
+              <span class="text-[11px] font-bold" :style="{ color: 'var(--sb-muted)' }">{{ link.hint }}</span>
+            </span>
+            <UIcon name="i-lucide-chevron-right" class="size-[18px] shrink-0" :style="{ color: 'var(--sb-muted)' }" aria-hidden="true" />
+          </NuxtLink>
+        </div>
       </section>
 
       <UButton

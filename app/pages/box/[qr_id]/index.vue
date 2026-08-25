@@ -321,7 +321,7 @@ async function onMove() {
           </div>
         </div>
 
-        <div v-if="itemsPending" data-testid="item-list-loading" class="flex flex-col gap-2">
+        <div v-if="itemsPending" data-testid="item-list-loading" class="grid gap-2 md:grid-cols-2">
           <USkeleton v-for="n in 3" :key="n" class="h-[72px] w-full rounded-[1.25rem]" />
         </div>
 
@@ -353,7 +353,9 @@ async function onMove() {
           v-else
           data-testid="item-list"
           :data-layout="itemLayout"
-          :class="itemLayout === 'grid' ? 'grid grid-cols-2 gap-[9px]' : 'flex flex-col gap-[9px]'"
+          :class="itemLayout === 'grid'
+            ? 'grid grid-cols-2 gap-[9px] md:grid-cols-3 xl:grid-cols-4'
+            : 'grid gap-[9px] md:grid-cols-2'"
         >
           <ItemCard
             v-for="item in items"
