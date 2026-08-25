@@ -206,7 +206,7 @@ async function onMove() {
 
     <UAlert v-else-if="boxIsError" color="error" class="m-[1.375rem]" :description="boxErrorMessage" />
 
-    <div v-else-if="box" class="pb-40">
+    <div v-else-if="box" class="pb-40 lg:pb-10">
       <!-- The box's own colour, edge to edge. Everything below it that is
            tinted, outlined or filled reads the same `--c`. -->
       <header class="sb-header">
@@ -321,6 +321,41 @@ async function onMove() {
           </div>
         </div>
 
+        <!-- The thumb-zone bar the design gives this screen instead of the nav
+             pill. Fixed, so adding an item never means scrolling to the bottom
+             of a full box first. Static at desktop width, beside the heading
+             above rather than floating over the page. -->
+        <div
+          v-if="canEdit"
+          class="sb-action-bar fixed inset-x-0 bottom-0 z-40 flex items-stretch gap-2.5 px-[1.375rem] pt-3.5 pb-[calc(1.5rem+env(safe-area-inset-bottom))] lg:static lg:justify-end lg:gap-3 lg:p-0"
+        >
+          <UButton
+            v-if="selectMode && selectedIds.length > 0"
+            data-testid="move-items"
+            icon="i-lucide-folder-input"
+            size="xl"
+            class="h-14 flex-1 justify-center rounded-[1.25rem] font-extrabold lg:flex-none"
+            :style="{ background: 'var(--sb-ink)', color: 'var(--sb-on-ink)' }"
+            @click="moveOpen = true"
+          >
+            Move {{ selectedIds.length }}
+          </UButton>
+          <UButton
+            data-testid="add-item"
+            icon="i-lucide-plus"
+            size="xl"
+            class="h-14 flex-[1.3] justify-center rounded-[1.25rem] font-extrabold lg:flex-none"
+            :style="{
+              background: 'var(--c)',
+              color: 'var(--c-on)',
+              boxShadow: '0 14px 28px color-mix(in oklch, var(--c) 45%, transparent)'
+            }"
+            :to="`/box/${qrId}/item/new`"
+          >
+            Add item
+          </UButton>
+        </div>
+
         <div
           v-if="itemsPending"
           data-testid="item-list-loading"
@@ -382,41 +417,6 @@ async function onMove() {
           noun="items"
           @more="fetchMoreItems()"
         />
-      </div>
-
-      <!-- The thumb-zone bar the design gives this screen instead of the nav
-           pill. Fixed, so adding an item never means scrolling to the bottom
-           of a full box first. -->
-      <div
-        v-if="canEdit"
-        class="fixed inset-x-0 bottom-0 z-40 flex items-stretch gap-2.5 px-[1.375rem] pt-3.5 pb-[calc(1.5rem+env(safe-area-inset-bottom))]"
-        :style="{ background: 'linear-gradient(to top, var(--sb-bg) 72%, transparent)' }"
-      >
-        <UButton
-          v-if="selectMode && selectedIds.length > 0"
-          data-testid="move-items"
-          icon="i-lucide-folder-input"
-          size="xl"
-          class="h-14 flex-1 justify-center rounded-[1.25rem] font-extrabold"
-          :style="{ background: 'var(--sb-ink)', color: 'var(--sb-on-ink)' }"
-          @click="moveOpen = true"
-        >
-          Move {{ selectedIds.length }}
-        </UButton>
-        <UButton
-          data-testid="add-item"
-          icon="i-lucide-plus"
-          size="xl"
-          class="h-14 flex-[1.3] justify-center rounded-[1.25rem] font-extrabold"
-          :style="{
-            background: 'var(--c)',
-            color: 'var(--c-on)',
-            boxShadow: '0 14px 28px color-mix(in oklch, var(--c) 45%, transparent)'
-          }"
-          :to="`/box/${qrId}/item/new`"
-        >
-          Add item
-        </UButton>
       </div>
 
       <UModal v-model:open="editOpen" title="Edit box">

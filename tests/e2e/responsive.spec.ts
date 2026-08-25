@@ -100,3 +100,40 @@ test.describe('list grids', () => {
     expect(overflowing).toBe(0)
   })
 })
+
+test.describe('promoted actions', () => {
+  test('offers New box in the header, not as a floating button', async ({ page }) => {
+    await page.goto('/boxes')
+    await expect(page.getByTestId('new-box')).toBeVisible()
+    // Still in the DOM, hidden by CSS — assert visibility, not count.
+    await expect(page.getByTestId('new-box-fab')).toBeHidden()
+  })
+
+  test('keeps the floating button at tablet width', async ({ page }) => {
+    await page.setViewportSize(TABLET)
+    await page.goto('/boxes')
+    await expect(page.getByTestId('new-box-fab')).toBeVisible()
+    await expect(page.getByTestId('new-box')).toBeHidden()
+  })
+
+  test('New box in the header actually opens the form', async ({ page }) => {
+    await page.goto('/boxes')
+    await page.getByTestId('new-box').click()
+    await expect(page).toHaveURL('/box/new')
+  })
+
+  test('sits Add item beside the Items heading, not over the page', async ({ page }) => {
+    await page.goto('/boxes')
+    await page.getByTestId('box-card').first().click()
+    const add = page.getByTestId('add-item')
+    await expect(add).toBeVisible()
+    // Static, not fixed: a floating bar across a wide window reads as
+    // leftover phone chrome, and it would sit under the rail.
+    const position = await add.evaluate(el => {
+      const bar = el.closest('.sb-action-bar')
+      if (!bar) throw new Error('expected Add item inside .sb-action-bar')
+      return getComputedStyle(bar).position
+    })
+    expect(position).toBe('static')
+  })
+})

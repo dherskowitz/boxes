@@ -44,8 +44,21 @@ const isEmpty = computed(() => boxFill.value !== undefined && totals.value.boxes
         </p>
       </template>
 
-      <template v-if="isEmpty" #actions>
-        <NuxtLink to="/more" aria-label="Your account">
+      <template #actions>
+        <!-- Desktop only. The floating button below is the phone affordance,
+             and there is no thumb zone here to put it in. `hidden` is
+             display:none, so `getByRole` never sees both at once. -->
+        <UButton
+          v-if="!isEmpty"
+          to="/box/new"
+          data-testid="new-box"
+          icon="i-lucide-plus"
+          color="neutral"
+          class="hidden shrink-0 rounded-full bg-white/20 font-extrabold text-current hover:bg-white/30 lg:flex"
+        >
+          New box
+        </UButton>
+        <NuxtLink v-if="isEmpty" to="/more" aria-label="Your account">
           <UserAvatar :name="member?.name" />
         </NuxtLink>
       </template>
@@ -96,9 +109,10 @@ const isEmpty = computed(() => boxFill.value !== undefined && totals.value.boxes
     <UButton
       v-if="!isEmpty"
       to="/box/new"
+      data-testid="new-box-fab"
       aria-label="New box"
       icon="i-lucide-plus"
-      class="fixed right-[1.375rem] z-40 flex size-15 items-center justify-center rounded-full text-white"
+      class="fixed right-[1.375rem] z-40 flex size-15 items-center justify-center rounded-full text-white lg:hidden"
       :style="{
         bottom: 'calc(6.25rem + env(safe-area-inset-bottom))',
         background: 'var(--sb-accent)',
