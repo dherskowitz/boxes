@@ -72,3 +72,29 @@ test('exports the maskable icons full-bleed, with no transparent corners', async
     expect(corners, `maskable-icon-${size} corners`).toEqual([255, 255, 255, 255])
   }
 })
+
+/**
+ * The nudge used to live only in the default layout, so it appeared only once
+ * you were signed in — and the plugin calls `preventDefault()` on the event to
+ * suppress Chrome's own mini-infobar in favour of it. Between the two, someone
+ * who had not signed in yet was offered no way to install at all, which is most
+ * of the people the nudge is for.
+ */
+test('offers the install nudge on the login screen, before any account', async ({ page }) => {
+  await page.goto('/login')
+  await expect(page.getByRole('button', { name: 'Sign in' })).toBeVisible()
+
+  // Chrome fires this itself once it has read the manifest and found the
+  // worker; Playwright's Chromium never installs anything, so it is dispatched
+  // by hand. The plugin's listener is what catches it either way.
+  await page.evaluate(() => {
+    const event = Object.assign(new Event('beforeinstallprompt', { cancelable: true }), {
+      prompt: () => Promise.resolve(),
+      userChoice: Promise.resolve({ outcome: 'accepted' })
+    })
+    window.dispatchEvent(event)
+  })
+
+  await expect(page.getByTestId('install-prompt')).toBeVisible()
+  await expect(page.getByTestId('install-prompt')).toContainText('home screen')
+})

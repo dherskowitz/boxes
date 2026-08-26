@@ -42,6 +42,11 @@ async function onSubmit() {
 
 <template>
   <div class="min-h-dvh" :style="{ background: 'var(--sb-accent)' }">
+    <!-- `layout: false` means this screen mounts the nudge itself. Installing
+         does not need an account, and gating it behind one hid it from anyone
+         who had not signed in yet — which is most of the people it is for. -->
+    <InstallPrompt />
+
     <!-- `layout: false`, so this page inherits none of the shell and carries
          its own measure. The accent has to fill the window, so it stays on the
          element above and the measure goes on this column. -->

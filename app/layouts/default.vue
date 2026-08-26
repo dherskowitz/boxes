@@ -40,16 +40,7 @@ const showOffline = computed(() => route.meta.offlineBanner !== false)
            see the component. -->
       <OfflineBanner v-if="showOffline" />
 
-      <!-- The nudge stays fixed: it is a one-off prompt rather than a state,
-           and reflowing the page under the reader's thumb to announce it is
-           worse than floating it. `pointer-events-none` on the strip so the
-           empty space beside it never eats a tap meant for the page; the
-           prompt turns pointer events back on for itself. -->
-      <div
-        class="pointer-events-none fixed inset-x-0 top-0 z-50 flex flex-col gap-2 px-[1.375rem] pt-[max(env(safe-area-inset-top),0.75rem)] [&>*]:pointer-events-auto"
-      >
-        <InstallPrompt />
-      </div>
+      <InstallPrompt />
 
       <div v-if="isMembershipPending" data-testid="membership-pending" class="p-[1.375rem]">
         <USkeleton class="h-8 w-48" />
