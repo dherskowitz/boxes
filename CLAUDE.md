@@ -103,6 +103,7 @@ pnpm test:e2e    # playwright, builds the app and serves it on :3000 itself
 - **Never include an ownership field in an update.** The update rules use `:isset = false`, which rejects the payload if `created_by` / `user` is present *at all* — even set to the correct value. Send only changed fields; never spread a fetched record into `update()`.
 - Paginate every list. Use `perPage` and `expand` for relations — never fetch all records to filter or join them client-side.
 - List screens use `useInfiniteBoxList` / `useInfiniteItemList` with `<InfiniteList>`, not a pager. The filters are the query key, so narrowing drops the accumulated pages and restarts at page one — no page ref to reset by hand. `keys.*.infinite()` strips `page` for the same reason: it is the query's cursor, not a filter. `useBoxList` / `useItemList` stay for the genuinely single-page reads (the dashboard's recent boxes, the move-target picker).
+- Cancel before you invalidate on a write whose list may still be loading. `invalidateQueries` is answered by a fetch already in flight, and one issued *before* the write returns pre-write data that the query then keeps — no error, no second request, nothing to see until a reload. A comment posted while its thread was still loading was invisible exactly this way; `useCreateComment` calls `cancelQueries` first.
 - Every write mutation calls `assertOnline()` first, and mutations run with `networkMode: 'always'` (set once in `nuxt.config.ts`). TanStack's default pauses a mutation offline: `mutationFn` never runs and the promise never settles, so the button hangs with no message.
 - `useTags()` and `useAppUsers()` are the only deliberate `getFullList` exceptions — small bounded vocab/roster every picker needs whole. Leave them unpaginated.
 - `app/queries/` is auto-imported via `imports.dirs` in `nuxt.config.ts`. Adding a new top-level `app/` directory does **not** auto-import it — only `composables/` and `utils/` are scanned by default.
@@ -178,6 +179,7 @@ pnpm test:e2e    # playwright, builds the app and serves it on :3000 itself
 - A `<br>` contributes no whitespace to `textContent`, so `Storage<br>Boxes` is announced — and matched by `getByText` — as "StorageBoxes". Put a space before the break.
 - Never give an icon button an `aria-label` containing a word a form field on the same screen is labelled with. Playwright's `getByLabel` matches both, so "Rename winter" makes `getByLabel('Name')` ambiguous. Put the name in `sr-only` content instead — `getByRole` sees it, `getByLabel` and `getByText` do not.
 - Nuxt UI forwards only link props to a `DropdownMenuItem`, so a `data-testid` on one never reaches the DOM. Address menu items by role — `tests/e2e/helpers.ts` has `boxAction` / `itemAction` / `openBoxActions` for the kebabs.
+- Never click "Load more" in a test. The foot is a button *and* an `IntersectionObserver` target, so scrolling it into view to click it is what makes the observer fire — the button detaches mid-click and Playwright retries until it times out. Scroll the last row into view and assert the new count.
 - Asserting the document does not scroll sideways proves nothing when the container clips: `overflow: hidden` turns an overflow bug into a silent cropping bug and the check still passes. Assert the element fits its frame, and prove the assertion fails with the fix reverted.
 - Desktop layout has its own Playwright project (`desktop`) running only `responsive.spec.ts`; `mobile` ignores that file. The project sets an explicit viewport rather than `devices['Desktop Chrome']`, whose `channel: 'chrome'` needs real Chrome, and turns off `isMobile` / `hasTouch` by hand because the top-level `use` spreads Pixel 7.
 
@@ -185,10 +187,8 @@ pnpm test:e2e    # playwright, builds the app and serves it on :3000 itself
 
 If a task leaves something open — which screen, what happens on failure, whether it needs a schema change — ask. One question up front is cheaper than half a day in the wrong direction.
 
-- Ask when the request could reasonably mean two different things.
-- Ask before changing the PocketBase schema or an API rule.
-- Do not invent product decisions, copy, or acceptance criteria.
-- Do not widen scope past what was asked. Note the adjacent thing you spotted; don't fix it unprompted.
+- Ask when the request could reasonably mean two different things, and before changing the PocketBase schema or an API rule.
+- Do not invent product decisions, copy, or acceptance criteria. Do not widen scope past what was asked — note the adjacent thing you spotted; don't fix it unprompted.
 - If you had to assume something you could not resolve, say so explicitly in your summary.
 
 ## Keeping this file current

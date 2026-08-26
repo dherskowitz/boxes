@@ -223,7 +223,12 @@ test.describe('as the box creator', () => {
     await page.getByTestId('item-select').first().click()
     await expect(page.getByTestId('move-items')).toBeVisible()
 
-    await page.getByRole('button', { name: 'Load more' }).click()
+    // Scrolled to, not clicked. The foot is both a button and an
+    // IntersectionObserver target: scrolling it into view to click it is what
+    // makes the observer fire, so the button detaches mid-click and Playwright
+    // retries until it times out. How the next page arrives is not what this
+    // test is about — that the selection survives it is.
+    await page.getByTestId('item-row').last().scrollIntoViewIfNeeded()
     await expect(page.getByTestId('item-row')).toHaveCount(31)
     await expect(page.getByTestId('move-items')).toBeVisible()
     // Still exactly one, not one per page.
