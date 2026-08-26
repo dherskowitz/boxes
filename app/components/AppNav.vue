@@ -24,10 +24,12 @@ const rightLinks = [
   { to: '/more', label: 'More', icon: 'i-lucide-ellipsis' }
 ] as const
 
-// One ordered list for the rail. The pill splits its four destinations around
-// the raised scan button; a vertical rail has no thumb zone to raise anything
-// into, so scan sits in sequence and keeps its amber only as a badge.
-const railLinks = [...links, { to: '/scan', label: 'Scan', icon: 'i-lucide-scan-line' }, ...rightLinks] as const
+// The same four destinations, in one column. No scan: it is the pill's
+// headline action because a phone is what you point at a label, and a desktop
+// has no camera worth pointing at one. Scanning stays reachable from More and
+// from an empty box list — it just does not hold a slot on a machine that
+// cannot really do it.
+const railLinks = [...links, ...rightLinks] as const
 
 // `v-if`, not `hidden lg:flex`. Both navs in the DOM makes every existing
 // `getByTestId('nav-*')` in the e2e suite match two elements. `ssr: false`
@@ -59,14 +61,7 @@ function isActive(to: string): boolean {
       :class="isActive(link.to) ? 'bg-white/10 text-white' : 'text-[#7d786e] hover:text-white'"
       :aria-current="isActive(link.to) ? 'page' : undefined"
     >
-      <span
-        v-if="link.to === '/scan'"
-        class="flex size-8 shrink-0 items-center justify-center rounded-xl"
-        :style="{ background: 'var(--sb-amber)', color: 'var(--sb-amber-ink)' }"
-      >
-        <UIcon :name="link.icon" class="size-[18px]" aria-hidden="true" />
-      </span>
-      <UIcon v-else :name="link.icon" class="size-[22px] shrink-0" aria-hidden="true" />
+      <UIcon :name="link.icon" class="size-[22px] shrink-0" aria-hidden="true" />
       {{ link.label }}
     </NuxtLink>
   </nav>

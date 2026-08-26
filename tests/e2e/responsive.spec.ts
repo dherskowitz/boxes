@@ -33,6 +33,23 @@ test.describe('desktop shell', () => {
     await expect(page.getByTestId('nav-rail')).toBeVisible()
   })
 
+  test('keeps scanning off the rail', async ({ page }) => {
+    // A desktop has no camera worth pointing at a label. Scanning stays
+    // reachable from More and from an empty box list; it just does not hold
+    // one of five rail slots on a machine that cannot do it.
+    await page.goto('/')
+    await expect(page.getByTestId('nav-rail')).toBeVisible()
+    await expect(page.getByTestId('nav-scan')).toBeHidden()
+    await expect(page.getByTestId('nav-more')).toBeVisible()
+  })
+
+  test('still offers scanning on the pill at tablet width', async ({ page }) => {
+    await page.setViewportSize(TABLET)
+    await page.goto('/')
+    await expect(page.getByTestId('nav-pill')).toBeVisible()
+    await expect(page.getByTestId('nav-scan')).toBeVisible()
+  })
+
   test('leaves the scanner chromeless', async ({ page }) => {
     await page.goto('/scan')
     await expect(page.getByTestId('nav-rail')).toHaveCount(0)
