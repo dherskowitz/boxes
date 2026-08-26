@@ -27,15 +27,12 @@ Seed realistic fixture data (idempotent, local only):
 python3 scripts/pb-seed.py http://localhost:8090
 ```
 
-Accounts: `dana@local.test` (owner, creates the boxes), `sam@local.test`
-(member, editor on one box), `rae@local.test` (member, read-only),
-`nobody@local.test` (no membership — the access-denied case). Password for all:
-`storagedev123`.
+Accounts: `dana@local.test` (owner, creates the boxes), `sam@local.test` (member, editor on one box),
+`rae@local.test` (member, read-only), `nobody@local.test` (no membership — the access-denied case). Password for all: `storagedev123`.
 
-Admin dashboard: <http://localhost:8090/_/> — `dev@local.test` / `devpassword123`
-(seeded by compose; override with `PB_ADMIN_EMAIL` / `PB_ADMIN_PASSWORD`).
-Local-only credentials, bound to loopback. `docker compose down -v` resets the
-instance to a clean migrated state.
+Admin dashboard: <http://localhost:8090/_/> — `dev@local.test` / `devpassword123` (seeded by compose;
+override with `PB_ADMIN_EMAIL` / `PB_ADMIN_PASSWORD`). Local-only credentials, bound to loopback.
+`docker compose down -v` resets the instance to a clean migrated state.
 
 ### Running an isolated stack (parallel worktrees)
 
@@ -61,9 +58,8 @@ It is **not** the e2e fixture; run `pb-seed.py` again before `pnpm test:e2e`. Se
 
 ### Schema changes
 
-`pb_migrations/` recreates every `storage_*` collection, creates `apps` / `app_memberships` only if
-absent, and seeds the `apps` row with `key = "storage"`. Import runs in extend mode, so unrelated
-collections on a shared instance are never touched.
+`pb_migrations/` recreates every `storage_*` collection, creates `apps` / `app_memberships` only if absent, and
+seeds the `apps` row with `key = "storage"`. Import runs in extend mode, so unrelated collections on a shared instance are never touched.
 
 Schema edits are made in a PocketBase admin UI, then captured:
 
@@ -138,6 +134,9 @@ pnpm test:e2e    # playwright, boots and stops its own dev server
 - Boxes carry no photos — only items do. A picture of a sealed cardboard box says nothing its printed label does not, and the tile that stood in for one cost the title a third of the header row. `storage_boxes.images` stays in the schema so an older box's pictures still load; nothing writes to it.
 - A box's colour comes from `boxColor(qr_id)`, not the schema. Set `--c` / `--c-on` once per screen with `boxColorVars()`; the `.sb-*` classes read them.
 - Set the foreground whenever you set a background from stored data — `readableInk(hex)` picks it. A tag colour is user data and `UBadge`'s default ink is chosen for its own surface, so a painted chip inherited ink that vanished into the fill in dark mode.
+- Tablet and desktop are additive: every responsive class is `md:`- or `lg:`-prefixed and no base class changes. The 29 phone specs run at 412px and must stay green untouched. `AppNav` picks its rail or its pill with `v-if` on `useMediaQuery(DESKTOP)`, never `hidden lg:flex` — both navs in the DOM makes every `getByTestId('nav-*')` match two elements.
+- `.sb-body` and `.sb-page` sit outside any `@layer`, so they beat Tailwind utilities: `lg:max-w-2xl` on a `.sb-body` element silently loses. Add a class in the same unlayered block (`.sb-measure-form`, `.sb-measure-article`) and declare it after `.sb-body` — they share specificity, so source order decides.
+- `nav: false` hides the pill because it covers a screen's thumb zone; a side rail does not, so at `lg` those screens keep their navigation. `rail: false` is the opt-out for a screen that must stay chromeless at every width.
 
 ### TypeScript
 
@@ -180,6 +179,7 @@ pnpm test:e2e    # playwright, boots and stops its own dev server
 - Never give an icon button an `aria-label` containing a word a form field on the same screen is labelled with. Playwright's `getByLabel` matches both, so "Rename winter" makes `getByLabel('Name')` ambiguous. Put the name in `sr-only` content instead — `getByRole` sees it, `getByLabel` and `getByText` do not.
 - Nuxt UI forwards only link props to a `DropdownMenuItem`, so a `data-testid` on one never reaches the DOM. Address menu items by role — `tests/e2e/helpers.ts` has `boxAction` / `itemAction` / `openBoxActions` for the kebabs.
 - Asserting the document does not scroll sideways proves nothing when the container clips: `overflow: hidden` turns an overflow bug into a silent cropping bug and the check still passes. Assert the element fits its frame, and prove the assertion fails with the fix reverted.
+- Desktop layout has its own Playwright project (`desktop`) running only `responsive.spec.ts`; `mobile` ignores that file. The project sets an explicit viewport rather than `devices['Desktop Chrome']`, whose `channel: 'chrome'` needs real Chrome, and turns off `isMobile` / `hasTouch` by hand because the top-level `use` spreads Pixel 7.
 
 ## Ask before you assume
 
