@@ -160,3 +160,19 @@ test.describe('article and form measures', () => {
     expect(box.width).toBeLessThanOrEqual(672) // 42rem
   })
 })
+
+test.describe('login', () => {
+  test.use({ storageState: { cookies: [], origins: [] } })
+
+  test('centres its card instead of stretching it', async ({ page }) => {
+    await page.setViewportSize({ width: 2560, height: 1200 })
+    await page.goto('/login')
+    const field = page.getByLabel('Email')
+    await expect(field).toBeVisible()
+    const box = await field.boundingBox()
+    if (!box) throw new Error('expected a measured email field')
+    expect(box.width).toBeLessThanOrEqual(600)
+    // Centred, not pinned left: the card's midpoint sits near the viewport's.
+    expect(box.x + box.width / 2).toBeGreaterThan(900)
+  })
+})
