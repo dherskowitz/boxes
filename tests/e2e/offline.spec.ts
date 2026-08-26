@@ -2,7 +2,9 @@ import { expect, test } from '@playwright/test'
 import { authedPb, createBox, createItem, throwawayBoxes } from './helpers'
 
 // These tests exist to prove the service worker caches — it must run here.
-test.use({ storageState: 'tests/e2e/.auth/dana.json', serviceWorkers: 'allow' })
+// The build's origin, not the dev server's — this spec runs in the `offline`
+// project, which is the only one with a service worker worth testing.
+test.use({ storageState: 'tests/e2e/.auth/dana-build.json', serviceWorkers: 'allow' })
 
 // Nothing here touches a seeded record: the write test builds its own box and
 // item and hands them to the shared teardown, which runs in `afterEach` so a
@@ -15,6 +17,29 @@ test('a previously-viewed box still opens with no network', async ({ page, conte
   await expect(page.getByText('Winter coats and boots')).toBeVisible()
   await expect(page.getByText('Navy wool peacoat')).toBeVisible()
 
+  // The worker is registered by this load but does not serve it: it installs,
+  // precaches and only then claims the page. Cutting the network before that
+  // leaves the reload with nothing to answer it, which is the same
+  // ERR_INTERNET_DISCONNECTED a broken cache config gives — so wait for the
+  // claim rather than reading that failure as a caching bug.
+  await page.waitForFunction(() => navigator.serviceWorker.controller !== null, null, { timeout: 30_000 })
+
+  // Then prime again, because claiming an open page does not retrospectively
+  // cache what it already fetched: the box, its items and the membership
+  // directory all went out before the worker existed. This second load is the
+  // one the runtime caching rules actually see. A real user gets this for free
+  // on their second visit; the test has to do it in one.
+  await page.reload()
+  await expect(page.getByText('Navy wool peacoat')).toBeVisible()
+
+  // `setOffline` on a live page fires `offline` and flips `navigator.onLine`,
+  // which is why the write tests below need nothing extra. A reload starts a
+  // fresh document that reports online again, and that property is the only
+  // thing the banner reads — so the signal has to be supplied here. The cache
+  // half is real: everything below goes through the worker with no network.
+  await page.addInitScript(() => {
+    Object.defineProperty(navigator, 'onLine', { get: () => false, configurable: true })
+  })
   await context.setOffline(true)
   await page.reload()
 
@@ -42,10 +67,9 @@ test('a previously-viewed box still opens with no network', async ({ page, conte
 test('a write attempted offline says it needs connectivity', async ({ page, context }) => {
   await page.goto('/box/new')
   // Wait for the form before cutting the network. `goto` resolves on `load`,
-  // but under `pnpm dev` the SPA is still pulling its module graph from Vite
-  // over the network at that point — going offline a moment too early kills
-  // those imports and the app never mounts at all, which tests the dev server
-  // rather than the write guard.
+  // while the SPA is still fetching the chunks it needs to mount — going
+  // offline a moment too early kills those and the app never mounts at all,
+  // which tests the loader rather than the write guard.
   await expect(page.getByLabel('Title')).toBeVisible()
 
   await context.setOffline(true)

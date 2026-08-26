@@ -8,6 +8,12 @@ export default defineNuxtConfig({
   devtools: { enabled: process.env.E2E !== '1' },
   ssr: false,
 
+  // `pnpm test:e2e` runs a dev server and a production build side by side —
+  // one for most specs, one for the offline reads. `nuxt build` clears its
+  // build directory and takes a lock on it, so sharing `.nuxt` with the
+  // running dev server destroys it mid-run. The build gets its own.
+  buildDir: process.env.NUXT_BUILD_DIR || '.nuxt',
+
   modules: [
     '@nuxt/ui',
     '@nuxt/icon',

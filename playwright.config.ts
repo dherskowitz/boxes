@@ -5,6 +5,17 @@ import { defineConfig, devices } from '@playwright/test'
 const PORT = process.env.E2E_PORT ?? '3000'
 const BASE = `http://127.0.0.1:${PORT}`
 
+// Offline reads cannot be verified against `pnpm dev`: the dev service worker's
+// precache manifest is exactly `[{ url: '/' }]`, because `globPatterns` is only
+// applied at build time, and its navigation route carries a dev-only
+// `allowlist: [/^\/$/]`. Reloading a box offline there fails with
+// ERR_INTERNET_DISCONNECTED however correct the caching config is. So
+// `offline.spec.ts` gets built output on its own port, and its own auth setup:
+// Playwright scopes `storageState` per origin, so the dev server's sessions do
+// not carry across.
+const BUILD_PORT = process.env.E2E_BUILD_PORT ?? '3100'
+const BUILD_BASE = `http://127.0.0.1:${BUILD_PORT}`
+
 export default defineConfig({
   testDir: 'tests/e2e',
   // The first navigation against a freshly started dev server compiles the
@@ -31,23 +42,55 @@ export default defineConfig({
     // mobile-first app — test the primary target
     ...devices['Pixel 7']
   },
-  webServer: {
-    command: `pnpm dev --host 127.0.0.1 --port ${PORT}`,
-    // Suppresses the Nuxt DevTools launcher — see nuxt.config.ts.
-    env: { E2E: '1' },
-    url: BASE,
-    timeout: 120_000,
-    reuseExistingServer: !process.env.CI
-  },
+  webServer: [
+    {
+      command: `pnpm dev --host 127.0.0.1 --port ${PORT}`,
+      // Suppresses the Nuxt DevTools launcher — see nuxt.config.ts.
+      env: { E2E: '1' },
+      url: BASE,
+      timeout: 120_000,
+      reuseExistingServer: !process.env.CI
+    },
+    {
+      // Both servers start on every run, whatever `--project` was asked for,
+      // so this build is a fixed cost of `pnpm test:e2e`. It is the only way
+      // the service worker under test exists at all.
+      // Its own build directory: `nuxt build` clears and locks the one it is
+      // given, and the dev server above is live in `.nuxt` for the whole run.
+      command: `pnpm build && pnpm preview --port ${BUILD_PORT}`,
+      env: { NUXT_BUILD_DIR: '.nuxt-e2e' },
+      url: BUILD_BASE,
+      // A cold `nuxt build` is well past the dev server's two minutes.
+      timeout: 600_000,
+      // Same footgun as the dev server: a preview left running on this port is
+      // reused as-is, serving whatever was built last. Kill it after changing
+      // anything the worker precaches.
+      reuseExistingServer: !process.env.CI
+    }
+  ],
   projects: [
     { name: 'setup', testMatch: /.*\.setup\.ts/ },
+    // The same sign-ins again, against the build. `auth.setup.ts` writes to a
+    // `-build` suffix when it runs here, so the two sets never clobber.
+    {
+      name: 'setup-build',
+      testMatch: /auth\.setup\.ts/,
+      use: { baseURL: BUILD_BASE }
+    },
     {
       name: 'mobile',
-      // The desktop layout gets its own project and its own viewport. Run this
-      // spec at 412px and it asserts a rail exists exactly where it must not.
-      testIgnore: /responsive\.spec\.ts/,
+      // The desktop layout and the offline reads each get their own project:
+      // run responsive.spec.ts at 412px and it asserts a rail exists exactly
+      // where it must not, and offline.spec.ts needs built output.
+      testIgnore: /(responsive|offline)\.spec\.ts/,
       use: { ...devices['Pixel 7'] },
       dependencies: ['setup']
+    },
+    {
+      name: 'offline',
+      testMatch: /offline\.spec\.ts/,
+      use: { ...devices['Pixel 7'], baseURL: BUILD_BASE },
+      dependencies: ['setup-build']
     },
     {
       name: 'desktop',

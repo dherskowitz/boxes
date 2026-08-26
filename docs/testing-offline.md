@@ -1,25 +1,32 @@
-# Testing offline reads by hand
+# Testing offline reads
 
-The automated offline-read test (`tests/e2e/offline.spec.ts`, "a previously-viewed
-box still opens with no network") **cannot pass against the dev server**, and is
-left failing on purpose rather than deleted or skipped. This document is how to
-verify the feature until that gap is closed.
+`tests/e2e/offline.spec.ts` covers this automatically, in the `offline`
+Playwright project. That project is separate because offline reads **cannot** be
+verified against `pnpm dev`:
 
-## Why the automated test can't run under `pnpm dev`
+- The dev service worker's precache manifest is exactly `[{ url: '/' }]`.
+  `globPatterns` is applied at build time only, so no JS, CSS, or route shell is
+  precached in dev.
+- Its navigation route carries a dev-only `allowlist: [/^\/$/]`, so
+  `/box/<qr_id>` is never served from cache.
 
-Verified by dumping the dev service worker at `/dev-sw.js?dev-sw`:
+So the project runs `pnpm build && pnpm preview` on its own port (3100), with
+`auth.setup.ts` run again for that origin — Playwright scopes `storageState` per
+origin. `pnpm test:e2e` pays for that build on every run, whatever `--project`
+was asked for; there is no way to have the worker under test without it.
 
-- Its precache manifest is exactly `[{ url: '/' }]`. `globPatterns` is applied at
-  build time only, so no JS, CSS, or route shell is precached in dev.
-- Its navigation route carries a dev-only `allowlist: [/^\/$/]`, so `/box/<qr_id>`
-  is never served from cache.
+Two things the spec has to do by hand that a real user gets for free:
 
-Reloading a box page offline therefore fails with `ERR_INTERNET_DISCONNECTED`
-regardless of whether the caching config is correct.
+- **Wait for the worker to claim the page, then load once more.** Claiming an
+  open page does not retrospectively cache what it already fetched, so the first
+  load caches nothing at all. A user's second visit is primed; the test has to
+  do both visits in one.
+- **Supply `navigator.onLine`.** Playwright's `setOffline` flips it on a live
+  page, but a reload starts a fresh document reporting online again — and that
+  property is the only thing the offline banner reads.
 
-Closing it properly needs a second Playwright project running against built
-output on its own port, with `auth.setup.ts` re-run for that baseURL — Playwright
-scopes `storageState` per origin. That is deliberately deferred.
+The manual pass below is still the way to look at the feature, and the way to
+check anything the spec does not assert.
 
 ## Before you start: clear any dev service worker
 
@@ -47,7 +54,7 @@ Then hard reload (Ctrl+Shift+R). Do the same in reverse before going back to
 
 ## Verify it by hand instead
 
-A production build precaches the whole shell (84 entries, including `/`), so the
+A production build precaches the whole shell (123 entries, including `/`), so the
 feature genuinely works there.
 
 ```bash

@@ -25,6 +25,10 @@ for (const { role, email } of ACCOUNTS) {
     // compile sits right on the 15s boundary, and the whole suite depends on
     // this file — a flake here means 112 tests never run.
     await expect(page).toHaveURL('/', { timeout: 45_000 })
-    await page.context().storageState({ path: `tests/e2e/.auth/${role}.json` })
+    // Playwright scopes `storageState` per origin, so the dev server's sessions
+    // are useless to the project running against built output on another port.
+    // That project runs this file again and its states go beside these.
+    const suffix = setup.info().project.name === 'setup-build' ? '-build' : ''
+    await page.context().storageState({ path: `tests/e2e/.auth/${role}${suffix}.json` })
   })
 }
