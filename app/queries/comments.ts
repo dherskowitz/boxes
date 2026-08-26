@@ -74,8 +74,17 @@ export function useCreateComment() {
         text: trimmed
       })
     },
-    onSettled: (_data, _error, variables) =>
-      queryClient.invalidateQueries({ queryKey: keys.comments.byItem(variables.itemId) })
+    // Cancel before invalidating. A thread whose first read is still in flight
+    // when the comment is posted otherwise never refetches at all: the
+    // invalidation is answered by that already-running request, which was
+    // issued before the comment existed, and its empty result is what the
+    // query keeps. The comment stays invisible until a reload — no error, no
+    // second request, nothing to see. Cancelling first forces a fresh read.
+    onSettled: async (_data, _error, variables) => {
+      const queryKey = keys.comments.byItem(variables.itemId)
+      await queryClient.cancelQueries({ queryKey })
+      await queryClient.invalidateQueries({ queryKey })
+    }
   })
 }
 
@@ -107,7 +116,16 @@ export function useDeleteComment() {
       assertOnline()
       return $pb.collection('storage_comments').delete(id)
     },
-    onSettled: (_data, _error, variables) =>
-      queryClient.invalidateQueries({ queryKey: keys.comments.byItem(variables.itemId) })
+    // Cancel before invalidating. A thread whose first read is still in flight
+    // when the comment is posted otherwise never refetches at all: the
+    // invalidation is answered by that already-running request, which was
+    // issued before the comment existed, and its empty result is what the
+    // query keeps. The comment stays invisible until a reload — no error, no
+    // second request, nothing to see. Cancelling first forces a fresh read.
+    onSettled: async (_data, _error, variables) => {
+      const queryKey = keys.comments.byItem(variables.itemId)
+      await queryClient.cancelQueries({ queryKey })
+      await queryClient.invalidateQueries({ queryKey })
+    }
   })
 }
