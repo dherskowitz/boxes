@@ -94,6 +94,14 @@ export default defineNuxtConfig({
       // installed, with the status bar and the gesture bar over the page.
       viewport: 'width=device-width, initial-scale=1, viewport-fit=cover',
       link: [
+        // The manifest link, stated here rather than left to the module's
+        // `<VitePwaManifest />` component. That component writes the link with
+        // `useHead` at runtime, and `ssr: false` means the prerendered
+        // index.html then ships with no manifest at all: Chrome and Firefox
+        // both decide installability from the parsed document, so neither ever
+        // offered to install the app. A static link is in the HTML that the
+        // Worker serves.
+        { rel: 'manifest', href: '/manifest.webmanifest' },
         // The .ico is picked up implicitly; these are the ones that are not.
         { rel: 'icon', type: 'image/svg+xml', href: '/favicon.svg' },
         { rel: 'apple-touch-icon', sizes: '180x180', href: '/apple-touch-icon.png' },

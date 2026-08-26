@@ -44,10 +44,22 @@ const ANDROID_UA
 const IOS_UA
   = 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 Version/17.0 Mobile/15E148 Safari/604.1'
 
+/** Dispatch the event the plugin's listener is waiting for. */
+function fireInstallPrompt() {
+  const event = Object.assign(new Event('beforeinstallprompt', { cancelable: true }), {
+    prompt: vi.fn().mockResolvedValue(undefined),
+    userChoice: Promise.resolve({ outcome: 'accepted' as const })
+  })
+  window.dispatchEvent(event)
+  return event
+}
+
+/** The captured event outlives a component, so each test starts without one. */
 beforeEach(() => {
   window.localStorage.clear()
   setUserAgent(ANDROID_UA)
   setStandalone(false)
+  useInstallPrompt().value = null
 })
 
 afterEach(() => {
@@ -57,17 +69,38 @@ afterEach(() => {
 describe('InstallPrompt', () => {
   it('offers an install button after beforeinstallprompt fires', async () => {
     const prompt = await mountSuspended(InstallPrompt)
-    const event = Object.assign(new Event('beforeinstallprompt', { cancelable: true }), {
-      prompt: vi.fn().mockResolvedValue(undefined),
-      userChoice: Promise.resolve({ outcome: 'accepted' as const })
-    })
-    window.dispatchEvent(event)
+    const event = fireInstallPrompt()
     await nextTick()
 
     expect(prompt.find('[data-testid="install-button"]').exists()).toBe(true)
 
     await prompt.find('[data-testid="install-button"]').trigger('click')
     expect(event.prompt).toHaveBeenCalled()
+  })
+
+  // The event fires once, as soon as the browser has parsed the manifest and
+  // found the worker — during the first load, and on a cold visit to /login
+  // this component is not mounted at all (that page is `layout: false`). A
+  // listener owned by the component is always too late; the plugin's is not.
+  it('offers an install button when the event fired before it mounted', async () => {
+    const event = fireInstallPrompt()
+    const prompt = await mountSuspended(InstallPrompt)
+
+    expect(prompt.find('[data-testid="install-button"]').exists()).toBe(true)
+
+    await prompt.find('[data-testid="install-button"]').trigger('click')
+    expect(event.prompt).toHaveBeenCalled()
+  })
+
+  it('stops offering once the browser reports the app installed', async () => {
+    fireInstallPrompt()
+    const prompt = await mountSuspended(InstallPrompt)
+    expect(prompt.find('[data-testid="install-button"]').exists()).toBe(true)
+
+    window.dispatchEvent(new Event('appinstalled'))
+    await nextTick()
+
+    expect(prompt.find('[data-testid="install-button"]').exists()).toBe(false)
   })
 
   it('shows an instructional nudge on iOS, which has no install-prompt API', async () => {

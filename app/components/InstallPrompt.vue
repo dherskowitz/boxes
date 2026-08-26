@@ -1,18 +1,7 @@
 <script setup lang="ts">
 const STORAGE_KEY = 'storage-app-install-dismissed'
 
-// The Chromium install-prompt event is not part of TS's DOM lib, so it needs
-// its own shape rather than an `as` cast onto `Event`.
-interface BeforeInstallPromptEvent extends Event {
-  prompt: () => Promise<void>
-  userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>
-}
-
-function isBeforeInstallPromptEvent(e: Event): e is BeforeInstallPromptEvent {
-  return 'prompt' in e
-}
-
-// iOS Safari exposes `navigator.standalone`, also missing from TS's DOM lib.
+// iOS Safari exposes `navigator.standalone`, missing from TS's DOM lib.
 interface NavigatorWithStandalone extends Navigator {
   standalone?: boolean
 }
@@ -30,10 +19,13 @@ function isIos() {
   return /iPad|iPhone|iPod/.test(navigator.userAgent)
 }
 
+// Captured by plugins/installPrompt.client.ts, which is listening from the
+// first load — this component mounts far too late to catch the event itself.
+const deferredPrompt = useInstallPrompt()
+
 const dismissed = ref(localStorage.getItem(STORAGE_KEY) === 'true')
 const standalone = ref(isStandaloneDisplay())
 const ios = ref(isIos())
-const deferredPrompt = shallowRef<BeforeInstallPromptEvent | null>(null)
 
 const showInstallButton = computed(
   () => !standalone.value && !dismissed.value && deferredPrompt.value !== null
@@ -41,21 +33,6 @@ const showInstallButton = computed(
 const showIosHint = computed(
   () => !standalone.value && !dismissed.value && ios.value && deferredPrompt.value === null
 )
-
-function onBeforeInstallPrompt(e: Event) {
-  e.preventDefault()
-  if (isBeforeInstallPromptEvent(e)) {
-    deferredPrompt.value = e
-  }
-}
-
-onMounted(() => {
-  window.addEventListener('beforeinstallprompt', onBeforeInstallPrompt)
-})
-
-onUnmounted(() => {
-  window.removeEventListener('beforeinstallprompt', onBeforeInstallPrompt)
-})
 
 async function install() {
   if (!deferredPrompt.value) return
