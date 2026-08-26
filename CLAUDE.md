@@ -27,12 +27,9 @@ Seed realistic fixture data (idempotent, local only):
 python3 scripts/pb-seed.py http://localhost:8090
 ```
 
-Accounts: `dana@local.test` (owner, creates the boxes), `sam@local.test` (member, editor on one box),
-`rae@local.test` (member, read-only), `nobody@local.test` (no membership — the access-denied case). Password for all: `storagedev123`.
+Accounts: `dana@local.test` (owner, creates the boxes), `sam@local.test` (member, editor on one box), `rae@local.test` (member, read-only), `nobody@local.test` (no membership — the access-denied case). Password for all: `storagedev123`.
 
-Admin dashboard: <http://localhost:8090/_/> — `dev@local.test` / `devpassword123` (seeded by compose;
-override with `PB_ADMIN_EMAIL` / `PB_ADMIN_PASSWORD`). Local-only credentials, bound to loopback.
-`docker compose down -v` resets the instance to a clean migrated state.
+Admin dashboard: <http://localhost:8090/_/> — `dev@local.test` / `devpassword123` (seeded by compose; override with `PB_ADMIN_EMAIL` / `PB_ADMIN_PASSWORD`). Local-only credentials, bound to loopback. `docker compose down -v` resets the instance to a clean migrated state.
 
 ### Running an isolated stack (parallel worktrees)
 
@@ -123,6 +120,7 @@ pnpm test:e2e    # playwright, builds the app and serves it on :3000 itself
 - Give every `UAlert` an explicit `color` (`error` / `warning` / `neutral` / `info`). The default is the primary colour, so an uncoloured error renders green.
 - Every form is a `UForm` with a plain `validate` returning `FormError[]`, one `UFormField name="…"` per field. No validation library, and no native `required` — its bubble fires before `validate` and the field message never shows. Never disable a submit button to stand in for validation; disable it only while the mutation is pending.
 - Screenshot any screen you build and look at it before calling it done. Check the narrow viewport for clipped text and content under the safe area.
+- Full-height screens use `min-h-dvh`, never `min-h-screen`. `100vh` is the *large* viewport on mobile Chrome, so the page stands taller than the window and scrolls the whole time the URL bar is up — which is what made the login screen scroll. No test catches it: headless Chromium has no collapsing bar, so `vh` and `dvh` are equal there.
 - Every icon is compiled into the client bundle at build time — `icon.clientBundle.scan` over `app/**/*.{vue,ts}`, with `fallbackToApi: false`. Nuxt Icon's default scan only sees names written as literals in a template, so the nav pill's and the kebab's were missed and fetched from `api.iconify.design` per page: nothing renders offline, and a third party learns which screens get opened. `tests/e2e/icons.spec.ts` asserts both halves and fails if the config is reverted.
 - Declare the design tokens with `@theme static`, never a bare `@theme`. Tailwind v4 emits only the custom properties its own utilities reference, and Nuxt UI builds `--ui-bg-inverted`, `--ui-border-accented` and friends off the neutral scale from a stylesheet Tailwind never scans — tree-shaken away, they resolve to empty and every default component silently loses its background and border.
 - Slot classes set in `app/app.config.ts` are **prepended** to each component's own, so anything Nuxt UI also sets (its 1px `ring`, its radius) still wins. Set only properties it leaves alone; use the per-instance `:ui` prop to override one it does.

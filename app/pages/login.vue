@@ -41,12 +41,12 @@ async function onSubmit() {
 </script>
 
 <template>
-  <div class="min-h-screen" :style="{ background: 'var(--sb-accent)' }">
+  <div class="min-h-dvh" :style="{ background: 'var(--sb-accent)' }">
     <!-- `layout: false`, so this page inherits none of the shell and carries
          its own measure. The accent has to fill the window, so it stays on the
          element above and the measure goes on this column. -->
     <div
-      class="flex min-h-screen flex-col justify-center gap-7 px-[1.625rem] py-[max(env(safe-area-inset-top),2rem)] text-white md:mx-auto md:w-full md:max-w-md"
+      class="flex min-h-dvh flex-col justify-center gap-7 px-[1.625rem] py-[max(env(safe-area-inset-top),2rem)] text-white md:mx-auto md:w-full md:max-w-md"
     >
       <div class="flex flex-col gap-3.5">
         <div

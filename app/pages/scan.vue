@@ -65,7 +65,7 @@ async function onPhotoDetect(codes: { rawValue: string }[]) {
 </script>
 
 <template>
-  <div class="flex min-h-screen flex-col text-[#f4f2ec]" :style="{ background: '#0f0e11' }">
+  <div class="flex min-h-dvh flex-col text-[#f4f2ec]" :style="{ background: '#0f0e11' }">
     <ScanHit v-if="hit" :qr-id="hit" @again="onScanAgain" />
 
     <template v-else>

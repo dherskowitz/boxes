@@ -29,7 +29,7 @@ const showOffline = computed(() => route.meta.offlineBanner !== false)
 </script>
 
 <template>
-  <div class="flex min-h-screen flex-col" :class="{ 'sb-page sb-shell-offset': showNav }">
+  <div class="flex min-h-dvh flex-col" :class="{ 'sb-page sb-shell-offset': showNav }">
     <!-- No top bar: v2 moves navigation into the floating pill at the bottom
          and gives each page its own saturated header block, so the shell owns
          only the states that gate every page. -->

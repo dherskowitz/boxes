@@ -38,7 +38,7 @@ function retry() {
 <template>
   <UApp>
     <div
-      class="flex min-h-screen flex-col justify-center gap-8 px-[1.625rem] py-[max(env(safe-area-inset-top),2rem)] text-white"
+      class="flex min-h-dvh flex-col justify-center gap-8 px-[1.625rem] py-[max(env(safe-area-inset-top),2rem)] text-white"
       :style="{ background: isNotFound ? 'var(--sb-accent)' : 'oklch(0.6 0.2 25)' }"
       data-testid="error-page"
     >
