@@ -1,4 +1,23 @@
 // https://nuxt.com/docs/api/configuration/nuxt-config
+
+// `ssr: false` means `NUXT_PUBLIC_POCKETBASE_URL` is read once, at build time,
+// and baked into the client bundle — there is no server left to read it later.
+// A deploy built without it ships an app that dials `http://localhost:8090`
+// from whatever phone is running it: every request fails as mixed content, and
+// it presents as a login that will not go through rather than as a bad build.
+// That is exactly how a good bundle got overwritten once already.
+//
+// `WORKERS_CI` is set only inside Cloudflare Workers Builds, so a local build
+// and the e2e suite — both legitimately pointed at localhost — are untouched.
+const deployUrl = process.env.NUXT_PUBLIC_POCKETBASE_URL
+if (process.env.WORKERS_CI && !deployUrl?.startsWith('https://')) {
+  throw new Error(
+    `NUXT_PUBLIC_POCKETBASE_URL must be an https:// URL for a deployed build, but is ${deployUrl || '(unset)'}. `
+    + 'Set it as a *build* variable in the Workers Builds settings — a runtime '
+    + 'variable is never read, and an assets-only Worker cannot hold one anyway.'
+  )
+}
+
 export default defineNuxtConfig({
   compatibilityDate: '2025-07-15',
   // Off under Playwright. The DevTools launcher is a fixed overlay at the

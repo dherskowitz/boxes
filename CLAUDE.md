@@ -92,7 +92,7 @@ pnpm test:e2e    # playwright, builds the app and serves it on :3000 itself
 
 ### PocketBase
 
-- The URL comes from `runtimeConfig.public.pocketbaseUrl` (`NUXT_PUBLIC_POCKETBASE_URL`). Never hardcode a URL or commit credentials.
+- The URL comes from `runtimeConfig.public.pocketbaseUrl` (`NUXT_PUBLIC_POCKETBASE_URL`). Never hardcode a URL or commit credentials. `ssr: false` means it is read at **build** time and baked into the client bundle, so a deploy needs it as a *build* variable in Workers Builds — a runtime Worker variable is never read, and an assets-only Worker cannot hold one. A build without it ships an app dialling `http://localhost:8090` from the phone, which presents as a login that will not go through; the `WORKERS_CI` guard at the top of `nuxt.config.ts` fails that build instead.
 - **All reads and writes go through nuxt-query** (`useQuery` / `useMutation`). Never call `pb.collection().getList()` directly from a component — bypassing the query cache breaks offline reads.
 - **Client-side permission checks are UX only.** Hiding an Edit button is not access control; the API rules are the real guard. Never assume a check in the UI makes an operation safe.
 - In a query's `enabled` gate, `''` and `undefined` are not interchangeable. Box detail passes `''` while its box loads and must not query; `/items` passes no `boxId` at all and must. Gate on `!== ''`, never on truthiness — both are falsy and mean opposite things.
