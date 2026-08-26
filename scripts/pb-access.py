@@ -26,9 +26,14 @@ import urllib.request
 # shared with every other app on the instance; the rest are this app's own.
 VIEWS = ("storage_app_users", "storage_report_box_fill", "storage_report_tag_usage", "storage_report_growth")
 
+# Cloudflare in front of a deployed instance bans urllib's default user agent
+# outright — `403` with a body of `error code: 1010`, which reads exactly like
+# a rejected password and is not one. Any explicit agent is accepted.
+USER_AGENT = "storage-app-pb-access/1.0"
+
 
 def get(base, path, token):
-    request = urllib.request.Request(base + path, headers={"Authorization": token})
+    request = urllib.request.Request(base + path, headers={"Authorization": token, "User-Agent": USER_AGENT})
     return json.load(urllib.request.urlopen(request))
 
 
@@ -47,12 +52,18 @@ def superuser_token(base):
     request = urllib.request.Request(
         f"{base}/api/collections/_superusers/auth-with-password",
         data=json.dumps({"identity": email, "password": password}).encode(),
-        headers={"Content-Type": "application/json"},
+        headers={"Content-Type": "application/json", "User-Agent": USER_AGENT},
     )
     try:
         return json.load(urllib.request.urlopen(request))["token"]
     except urllib.error.HTTPError as e:
-        sys.exit(f"superuser login failed for {email} ({e.code}) — check PB_ADMIN_EMAIL / PB_ADMIN_PASSWORD")
+        # The body, not just the status. 400 is a wrong password; 403 means the
+        # account was found and refused, and only the message says why.
+        try:
+            detail = e.read().decode()[:400]
+        except Exception:
+            detail = "<no body>"
+        sys.exit(f"superuser login failed for {email} — HTTP {e.code}\n{detail}")
     except urllib.error.URLError as e:
         sys.exit(f"cannot reach {base}: {e.reason}")
 
