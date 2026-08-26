@@ -40,3 +40,35 @@ test('serves a manifest that meets the Android install bar', async ({ page }) =>
   expect(sizes).toContain('192x192')
   expect(sizes).toContain('512x512')
 })
+
+/**
+ * A maskable icon is full-bleed by definition: the launcher crops it to its
+ * own shape — a circle on some Androids, a squircle on others — and anything
+ * transparent at the corners is filled by the launcher's own plate, which is
+ * the pale border showing around the app icon on the home screen. The exports
+ * shipped with the rounded corners of the `any` icon, so every install drew
+ * that plate.
+ */
+test('exports the maskable icons full-bleed, with no transparent corners', async ({ page }) => {
+  await page.goto('/login')
+
+  for (const size of [192, 512]) {
+    const corners = await page.evaluate(async (px) => {
+      const img = new Image()
+      img.src = `/icons/maskable-icon-${px}x${px}.png`
+      await img.decode()
+
+      const canvas = document.createElement('canvas')
+      canvas.width = img.width
+      canvas.height = img.height
+      const ctx = canvas.getContext('2d')
+      if (!ctx) throw new Error('no 2d context')
+      ctx.drawImage(img, 0, 0)
+
+      const at = (x: number, y: number) => ctx.getImageData(x, y, 1, 1).data[3]
+      return [at(0, 0), at(img.width - 1, 0), at(0, img.height - 1), at(img.width - 1, img.height - 1)]
+    }, size)
+
+    expect(corners, `maskable-icon-${size} corners`).toEqual([255, 255, 255, 255])
+  }
+})
