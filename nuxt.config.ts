@@ -88,6 +88,11 @@ export default defineNuxtConfig({
 
   app: {
     head: {
+      // `viewport-fit=cover` is what makes `env(safe-area-inset-*)` resolve to
+      // anything but 0. Every one of those insets in main.css and on the
+      // headers was dead without it — which only shows once the app runs
+      // installed, with the status bar and the gesture bar over the page.
+      viewport: 'width=device-width, initial-scale=1, viewport-fit=cover',
       link: [
         // The .ico is picked up implicitly; these are the ones that are not.
         { rel: 'icon', type: 'image/svg+xml', href: '/favicon.svg' },
