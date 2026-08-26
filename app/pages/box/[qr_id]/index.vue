@@ -318,42 +318,44 @@ async function onMove() {
             >
               {{ selectMode ? 'Cancel' : 'Select' }}
             </UButton>
+            <!-- The thumb-zone bar the design gives this screen instead of the
+                 nav pill. Fixed, so adding an item never means scrolling to the
+                 bottom of a full box first — which also takes it out of flow, so
+                 sitting inside this row changes nothing on a phone. At desktop
+                 width it goes static and joins the row, beside Select: left as a
+                 sibling it landed on a line of its own in the gap between the
+                 heading and the first card. -->
+            <div
+              v-if="canEdit"
+              class="sb-action-bar fixed inset-x-0 bottom-0 z-40 flex items-stretch gap-2.5 px-[1.375rem] pt-3.5 pb-[calc(1.5rem+env(safe-area-inset-bottom))] lg:static lg:justify-end lg:gap-3 lg:p-0"
+            >
+              <UButton
+                v-if="selectMode && selectedIds.length > 0"
+                data-testid="move-items"
+                icon="i-lucide-folder-input"
+                size="xl"
+                class="h-14 flex-1 justify-center rounded-[1.25rem] font-extrabold lg:h-10 lg:flex-none"
+                :style="{ background: 'var(--sb-ink)', color: 'var(--sb-on-ink)' }"
+                @click="moveOpen = true"
+              >
+                Move {{ selectedIds.length }}
+              </UButton>
+              <UButton
+                data-testid="add-item"
+                icon="i-lucide-plus"
+                size="xl"
+                class="h-14 flex-[1.3] justify-center rounded-[1.25rem] font-extrabold lg:h-10 lg:flex-none"
+                :style="{
+                  background: 'var(--c)',
+                  color: 'var(--c-on)',
+                  boxShadow: '0 14px 28px color-mix(in oklch, var(--c) 45%, transparent)'
+                }"
+                :to="`/box/${qrId}/item/new`"
+              >
+                Add item
+              </UButton>
+            </div>
           </div>
-        </div>
-
-        <!-- The thumb-zone bar the design gives this screen instead of the nav
-             pill. Fixed, so adding an item never means scrolling to the bottom
-             of a full box first. Static at desktop width, beside the heading
-             above rather than floating over the page. -->
-        <div
-          v-if="canEdit"
-          class="sb-action-bar fixed inset-x-0 bottom-0 z-40 flex items-stretch gap-2.5 px-[1.375rem] pt-3.5 pb-[calc(1.5rem+env(safe-area-inset-bottom))] lg:static lg:justify-end lg:gap-3 lg:p-0"
-        >
-          <UButton
-            v-if="selectMode && selectedIds.length > 0"
-            data-testid="move-items"
-            icon="i-lucide-folder-input"
-            size="xl"
-            class="h-14 flex-1 justify-center rounded-[1.25rem] font-extrabold lg:flex-none"
-            :style="{ background: 'var(--sb-ink)', color: 'var(--sb-on-ink)' }"
-            @click="moveOpen = true"
-          >
-            Move {{ selectedIds.length }}
-          </UButton>
-          <UButton
-            data-testid="add-item"
-            icon="i-lucide-plus"
-            size="xl"
-            class="h-14 flex-[1.3] justify-center rounded-[1.25rem] font-extrabold lg:flex-none"
-            :style="{
-              background: 'var(--c)',
-              color: 'var(--c-on)',
-              boxShadow: '0 14px 28px color-mix(in oklch, var(--c) 45%, transparent)'
-            }"
-            :to="`/box/${qrId}/item/new`"
-          >
-            Add item
-          </UButton>
         </div>
 
         <div

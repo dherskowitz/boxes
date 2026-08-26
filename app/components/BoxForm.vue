@@ -105,10 +105,12 @@ function onValidSubmit() {
            real names wrap to three rows and push the tags and the submit off
            a phone screen — the suggestions are a shortcut, not the field. The
            scroll is on this row alone, so the page itself never moves
-           sideways. -->
+           sideways. It wraps from `lg` up instead: inside the desktop form
+           measure the scroll cut the last suggestion in half with the rest of
+           the window empty, and there is no thumb there to swipe it. -->
       <div v-if="suggestions.length" class="mt-2 flex items-center gap-2">
         <span class="sb-mono shrink-0" :style="{ color: 'var(--sb-muted)' }">Recent</span>
-        <div class="flex min-w-0 flex-1 gap-1.5 overflow-x-auto">
+        <div class="flex min-w-0 flex-1 gap-1.5 overflow-x-auto lg:flex-wrap">
           <button
             v-for="location in suggestions"
             :key="location"

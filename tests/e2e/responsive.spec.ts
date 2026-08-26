@@ -194,3 +194,48 @@ test.describe('login', () => {
     expect(box.x + box.width / 2).toBeGreaterThan(900)
   })
 })
+
+// What the wide-screen screenshot sweep turned up. Each of these renders
+// correctly on a phone and only comes apart once there is room to spare.
+test.describe('sweep fixes', () => {
+  test('lines Add item up with the Items heading', async ({ page }) => {
+    await page.goto('/boxes')
+    await page.getByTestId('box-card').first().click()
+    const add = page.getByTestId('add-item')
+    await expect(add).toBeVisible()
+    const heading = page.getByRole('heading', { level: 2, name: /^Items/ })
+    const a = await add.boundingBox()
+    const h = await heading.boundingBox()
+    if (!a || !h) throw new Error('expected Add item and the Items heading')
+    // Same row: the two boxes overlap vertically. Left as its own row it sat
+    // in a band of empty space between the heading and the first card.
+    expect(a.y).toBeLessThan(h.y + h.height)
+    expect(a.y + a.height).toBeGreaterThan(h.y)
+  })
+
+  test('fits the archived title on one line once there is room', async ({ page }) => {
+    await page.setViewportSize(TABLET)
+    await page.goto('/archived')
+    const title = page.getByRole('heading', { level: 1, name: 'Archived boxes' })
+    await expect(title).toBeVisible()
+    const box = await title.boundingBox()
+    if (!box) throw new Error('expected a measured archived title')
+    // The phone breaks it over two lines on purpose; at 30px type a second
+    // line puts this over 70px.
+    expect(box.height).toBeLessThan(50)
+  })
+
+  test('wraps the recent locations rather than clipping them', async ({ page }) => {
+    await page.goto('/box/new')
+    const chip = page.locator('[data-testid^="recent-location-"]').first()
+    await expect(chip).toBeVisible()
+    // The row scrolls sideways on a phone by design. Inside the desktop form
+    // measure that cut the last suggestion in half with the page half empty.
+    const overflowing = await chip.evaluate((el) => {
+      const row = el.parentElement
+      if (!row) throw new Error('expected a suggestions row')
+      return row.scrollWidth > row.clientWidth + 1
+    })
+    expect(overflowing).toBe(false)
+  })
+})

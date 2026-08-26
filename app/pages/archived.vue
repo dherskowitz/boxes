@@ -79,7 +79,7 @@ async function onUnarchive() {
   <div>
     <AppHeader eyebrow="More" back-to="/more">
       <template #title>
-        <h1 class="sb-display text-[30px]">Archived <br>boxes</h1>
+        <h1 class="sb-display text-[30px]">Archived <br class="md:hidden">boxes</h1>
         <p v-if="!isPending" class="text-sm opacity-85">
           {{ totalItems }} {{ totalItems === 1 ? 'box' : 'boxes' }} put away
         </p>
