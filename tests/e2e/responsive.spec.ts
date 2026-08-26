@@ -26,8 +26,9 @@ test.describe('desktop shell', () => {
   test('shows the rail on a screen that hides the pill', async ({ page }) => {
     // Box detail sets `nav: false` because the pill covers the thumb zone it
     // needs for Add item. A side rail takes no thumb zone, so it stays.
-    await page.goto('/boxes')
-    await page.getByTestId('box-card').first().click()
+    // A named box, not whichever card happens to be first: the list is newest
+    // first, and a spec running alongside this one puts its own fixture there.
+    await page.goto('/box/seedbox1')
     await expect(page.getByTestId('add-item')).toBeVisible()
     await expect(page.getByTestId('nav-rail')).toBeVisible()
   })
@@ -123,8 +124,7 @@ test.describe('promoted actions', () => {
   })
 
   test('sits Add item beside the Items heading, not over the page', async ({ page }) => {
-    await page.goto('/boxes')
-    await page.getByTestId('box-card').first().click()
+    await page.goto('/box/seedbox1')
     const add = page.getByTestId('add-item')
     await expect(add).toBeVisible()
     // Static, not fixed: a floating bar across a wide window reads as
@@ -199,8 +199,7 @@ test.describe('login', () => {
 // correctly on a phone and only comes apart once there is room to spare.
 test.describe('sweep fixes', () => {
   test('lines Add item up with the Items heading', async ({ page }) => {
-    await page.goto('/boxes')
-    await page.getByTestId('box-card').first().click()
+    await page.goto('/box/seedbox1')
     const add = page.getByTestId('add-item')
     await expect(add).toBeVisible()
     const heading = page.getByRole('heading', { level: 2, name: /^Items/ })

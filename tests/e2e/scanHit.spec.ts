@@ -3,8 +3,6 @@ import type { Page } from '@playwright/test'
 import QRCode from 'qrcode'
 import { authedPb, createBox, createItem, throwawayBoxes } from './helpers'
 
-const BASE = `http://127.0.0.1:${process.env.E2E_PORT ?? 3000}`
-
 test.use({ storageState: 'tests/e2e/.auth/dana.json' })
 
 const throwaway = throwawayBoxes()
@@ -17,28 +15,30 @@ const throwaway = throwawayBoxes()
 // The code is generated here rather than screenshotted out of the print page,
 // so the test exercises a real decodable QR and does not depend on how the
 // label happens to render one.
-async function qrPng(qrId: string): Promise<Buffer> {
+async function qrPng(base: string, qrId: string): Promise<Buffer> {
   // The payload a printed label carries: the absolute box URL, which is what
-  // `boxQrUrl` commits to paper.
-  return QRCode.toBuffer(`${BASE}/box/${qrId}`, { type: 'png', width: 512, margin: 2 })
+  // `boxQrUrl` commits to paper. Built from the project's own baseURL rather
+  // than a hardcoded port — `qrIdFromScan` reads only the pathname, so a wrong
+  // origin would still pass and quietly stop testing what the label carries.
+  return QRCode.toBuffer(`${base}/box/${qrId}`, { type: 'png', width: 512, margin: 2 })
 }
 
-async function scanFromPhoto(page: Page, qrId: string) {
+async function scanFromPhoto(page: Page, base: string, qrId: string) {
   await page.goto('/scan')
   await page.getByTestId('scan-from-photo').setInputFiles({
     name: 'label.png',
     mimeType: 'image/png',
-    buffer: await qrPng(qrId)
+    buffer: await qrPng(base, qrId)
   })
 }
 
-test('confirms which box was scanned, then opens it', async ({ page }) => {
+test('confirms which box was scanned, then opens it', async ({ page, baseURL }) => {
   const pb = await authedPb()
   const box = await createBox(pb, { title: 'Camping gear and tent poles', location: 'Garage shelf B2' })
   throwaway.push(box.id)
   await createItem(pb, { boxId: box.id, title: 'Two-burner camp stove' })
 
-  await scanFromPhoto(page, box.qr_id)
+  await scanFromPhoto(page, baseURL ?? '', box.qr_id)
 
   // Named before the page changes — the whole point of the beat.
   await expect(page.getByTestId('scan-hit')).toBeVisible()
@@ -50,12 +50,12 @@ test('confirms which box was scanned, then opens it', async ({ page }) => {
   await expect(page).toHaveURL(`/box/${box.qr_id}`)
 })
 
-test('scan again returns to the camera instead of opening the box', async ({ page }) => {
+test('scan again returns to the camera instead of opening the box', async ({ page, baseURL }) => {
   const pb = await authedPb()
   const box = await createBox(pb, { title: 'Wrong box entirely' })
   throwaway.push(box.id)
 
-  await scanFromPhoto(page, box.qr_id)
+  await scanFromPhoto(page, baseURL ?? '', box.qr_id)
 
   await expect(page.getByTestId('scan-hit')).toBeVisible()
   await page.getByTestId('scan-again').click()

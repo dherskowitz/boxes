@@ -78,7 +78,7 @@ A task is not done until this is green.
 pnpm lint        # eslint
 pnpm typecheck   # vue-tsc, catches the any/as/! rules eslint does not
 pnpm test        # vitest, unit, runs in the Nuxt environment
-pnpm test:e2e    # playwright, boots and stops its own dev server
+pnpm test:e2e    # playwright, builds the app and serves it on :3000 itself
 ```
 
 - Write the failing test first. Watch it fail for the right reason, then make it pass.
@@ -86,7 +86,7 @@ pnpm test:e2e    # playwright, boots and stops its own dev server
 - Never report success on a red loop. Never skip or `.only` a test to get to green.
 - If a test is wrong, say so and explain why before changing it.
 - Run `pnpm nuxt prepare` before `pnpm typecheck` after any merge or branch switch. A stale `.nuxt/imports.d.ts` reports every auto-imported symbol as "Cannot find name" — phantom errors that vanish on regeneration.
-- Don't leave `pnpm dev` running to "verify" — `test:e2e` manages its own server, and a stale one on `:3000` gets reused and produces confusing results.
+- Don't leave `pnpm dev` running on `:3000` — `test:e2e` serves its own build there and refuses to start if the port is taken. Use `pnpm dev --port 3200` to look at the app while the suite runs.
 
 ## Rules
 
@@ -168,11 +168,11 @@ pnpm test:e2e    # playwright, boots and stops its own dev server
 - Put e2e fixture teardown in `test.afterEach`, not a `finally`: Playwright hard-kills a timed-out test and the `finally` never runs, leaving the fixture dirty for every later run.
 - Call `pb.autoCancellation(false)` on a test's PocketBase client. The SDK cancels concurrent requests to the same endpoint, so a parallel fixture build silently keeps only the last write — and the cancelled ones still land server-side afterwards.
 - happy-dom does not synthesise a `submit` from a click on a `type="submit"` button. In a unit test, `trigger('submit')` on the form.
-- `/reports` **and `/`** pull in nuxt-charts, and that first compile on a cold dev server can outlast the 15s expect timeout — an assertion landing on either needs a longer one, or it looks like a broken route. `auth.setup.ts` lands on `/` after signing in, so a flake there stops the whole suite.
+- The suite runs against `pnpm build && pnpm preview`, not `pnpm dev`, and never reuses a server on that port: a preview left running serves whatever was built last, so reusing it would run the suite against stale code and pass. Compiling each route on first visit cost more than every assertion put together — 20.6m serial against dev, 3.1m on four workers against a build.
 - Read the `storage_*` collections **network-first**, never stale-while-revalidate. SWR answers the refetch a write just invalidated from cache and revalidates afterwards, so the app renders the pre-write list and the fresh copy lands where nothing reads it — a posted comment invisible until reload, a new box missing from the index. Every spec but `offline.spec.ts` blocks the worker, so no test can see it; `offline.spec.ts` owns the regression.
 - Playwright blocks service workers (`playwright.config.ts`); only the `offline` project allows them. The dev service worker bypasses `page.route` stubs and serves a stale list back to a test that just wrote.
-- A leftover `pnpm dev` on :3000 makes `authCache.spec.ts` and `offline.spec.ts` fail together with `waitForFunction` timeouts: `reuseExistingServer` hands the suite a server whose `.nuxt/dev-sw-dist/sw.js` a config change invalidated, so the worker never takes control. Kill every `nuxt.mjs dev`, `rm -rf .nuxt`, `pnpm nuxt prepare`, re-run. Six failures at once across those two files is this, not a regression.
-- Offline reads cannot be verified under `pnpm dev` — the dev worker precaches **nothing**, so `precacheAndRoute()` is emitted empty and the `NavigationRoute`'s `createHandlerBoundToURL('/')` points at a URL that was never cached. `offline.spec.ts` therefore runs in its own `offline` project against `pnpm build && pnpm preview` on :3100, with `auth.setup.ts` re-run for that origin (`storageState` is scoped per origin) and its own `NUXT_BUILD_DIR` — `nuxt build` clears and locks the build dir the live dev server is sitting in. Claiming an open page does not cache what it already fetched, so prime, wait for `serviceWorker.controller`, then load again. `setOffline` flips `navigator.onLine` on a live page but not through a reload; the banner reads only that. See `docs/testing-offline.md`.
+- `reports`, `items` and `dashboard` assert over the *whole* database — collection totals, the crowded-box ranking, the location donut, the newest items across every box. They create nothing and are only correct while the seeded fixture is all there is, so they run in a `baseline` project every other project depends on. A spec that asserts a global count or "the first card" belongs there; one that builds its own fixture never does.
+- Offline reads cannot be verified under `pnpm dev` — the dev worker precaches **nothing**, so `precacheAndRoute()` is emitted empty and the `NavigationRoute`'s `createHandlerBoundToURL('/')` points at a URL that was never cached. That is why the suite serves a build. Claiming an open page does not cache what it already fetched, so `offline.spec.ts` primes, waits for `serviceWorker.controller`, then loads again; `setOffline` flips `navigator.onLine` on a live page but not through a reload, and the banner reads only that. The build gets its own `NUXT_BUILD_DIR` so a dev server elsewhere keeps `.nuxt`. See `docs/testing-offline.md`.
 - Use realistic seed data — real box and item names, long titles, empty lists. Never "Test User" or lorem ipsum. Titles are labels — what you would write on the side with a marker; anything longer belongs in `description`. `pb-seed.py` attaches real photographs to named records (`BOX_PHOTOS` / `ITEM_PHOTOS`), downloaded once into `scripts/.photo-cache/` and falling back to a generated placeholder per photo when there is no network — `--fake-photos` forces the placeholders. "Navy wool peacoat" and "Empty spare box" are deliberately left bare, because tests assert the empty states on them.
 - The Nuxt DevTools launcher is a fixed overlay at the bottom centre of the viewport, exactly where the nav pill's scan button sits at 412px. `playwright.config.ts` sets `E2E=1` and `nuxt.config.ts` disables devtools on it; without that every tap on that button times out.
 - A `<br>` contributes no whitespace to `textContent`, so `Storage<br>Boxes` is announced — and matched by `getByText` — as "StorageBoxes". Put a space before the break.

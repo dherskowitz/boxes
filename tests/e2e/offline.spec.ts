@@ -2,9 +2,9 @@ import { expect, test } from '@playwright/test'
 import { authedPb, createBox, createItem, throwawayBoxes } from './helpers'
 
 // These tests exist to prove the service worker caches — it must run here.
-// The build's origin, not the dev server's — this spec runs in the `offline`
-// project, which is the only one with a service worker worth testing.
-test.use({ storageState: 'tests/e2e/.auth/dana-build.json', serviceWorkers: 'allow' })
+// The `offline` project is the only one that lets the worker register; every
+// other spec blocks it.
+test.use({ storageState: 'tests/e2e/.auth/dana.json', serviceWorkers: 'allow' })
 
 // Nothing here touches a seeded record: the write test builds its own box and
 // item and hands them to the shared teardown, which runs in `afterEach` so a

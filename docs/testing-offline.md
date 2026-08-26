@@ -1,21 +1,20 @@
 # Testing offline reads
 
 `tests/e2e/offline.spec.ts` covers this automatically, in the `offline`
-Playwright project. That project is separate because offline reads **cannot** be
-verified against `pnpm dev`:
+Playwright project. It works because the **whole suite** runs against built
+output — `pnpm build && pnpm preview` on `:3000` — rather than `pnpm dev`.
+Offline reads cannot be verified against the dev server at all:
 
-- The dev service worker's precache manifest is exactly `[{ url: '/' }]`.
-  `globPatterns` is applied at build time only, so no JS, CSS, or route shell is
-  precached in dev.
+- Its precache manifest is exactly `[{ url: '/' }]`. `globPatterns` is applied
+  at build time only, so no JS, CSS, or route shell is precached in dev.
 - Its navigation route carries a dev-only `allowlist: [/^\/$/]`, so
   `/box/<qr_id>` is never served from cache.
 
-So the project runs `pnpm build && pnpm preview` on its own port (3100), with
-`auth.setup.ts` run again for that origin — Playwright scopes `storageState` per
-origin. `pnpm test:e2e` pays for that build on every run, whatever `--project`
-was asked for; there is no way to have the worker under test without it.
+`offline` is a project of its own only because every other spec sets
+`serviceWorkers: 'block'` — a worker serving a stale list back to a test that
+just wrote is its own class of bug.
 
-Two things the spec has to do by hand that a real user gets for free:
+Two things the spec has to do that a real user gets for free:
 
 - **Wait for the worker to claim the page, then load once more.** Claiming an
   open page does not retrospectively cache what it already fetched, so the first
