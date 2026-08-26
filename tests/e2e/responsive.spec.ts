@@ -161,6 +161,24 @@ test.describe('article and form measures', () => {
   })
 })
 
+test.describe('phone layout', () => {
+  // Task 2 swapped every list wrapper from `flex flex-col` to `grid` so the
+  // `md:` column counts have something to apply to. `display: grid` with no
+  // template columns must still stack — if someone drops an `md:` prefix and
+  // a grid gets columns at phone width, this is what catches it.
+  test('stacks boxes in one column at phone width', async ({ page }) => {
+    await page.setViewportSize({ width: 412, height: 915 })
+    await page.goto('/boxes')
+    const cards = page.getByTestId('box-card')
+    await expect(cards.first()).toBeVisible()
+    const a = await cards.nth(0).boundingBox()
+    const b = await cards.nth(1).boundingBox()
+    if (!a || !b) throw new Error('expected at least two box cards')
+    expect(b.x).toBeCloseTo(a.x, 0)
+    expect(b.y).toBeGreaterThanOrEqual(a.y + a.height)
+  })
+})
+
 test.describe('login', () => {
   test.use({ storageState: { cookies: [], origins: [] } })
 
