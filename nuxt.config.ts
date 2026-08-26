@@ -1,22 +1,28 @@
 // https://nuxt.com/docs/api/configuration/nuxt-config
 
-// `ssr: false` means `NUXT_PUBLIC_POCKETBASE_URL` is read once, at build time,
-// and baked into the client bundle — there is no server left to read it later.
-// A deploy built without it ships an app that dials `http://localhost:8090`
-// from whatever phone is running it: every request fails as mixed content, and
-// it presents as a login that will not go through rather than as a bad build.
-// That is exactly how a good bundle got overwritten once already.
+// The deployed PocketBase instance, hardcoded on purpose and used only by a
+// Cloudflare Workers build.
 //
-// `WORKERS_CI` is set only inside Cloudflare Workers Builds, so a local build
-// and the e2e suite — both legitimately pointed at localhost — are untouched.
-const deployUrl = process.env.NUXT_PUBLIC_POCKETBASE_URL
-if (process.env.WORKERS_CI && !deployUrl?.startsWith('https://')) {
-  throw new Error(
-    `NUXT_PUBLIC_POCKETBASE_URL must be an https:// URL for a deployed build, but is ${deployUrl || '(unset)'}. `
-    + 'Set it as a *build* variable in the Workers Builds settings — a runtime '
-    + 'variable is never read, and an assets-only Worker cannot hold one anyway.'
-  )
-}
+// `ssr: false` means this URL is read once, while the bundle is built, and
+// baked into it — there is no server afterwards to read an environment. The
+// environment that build runs in lives in a dashboard this repo cannot see or
+// version, an assets-only Worker cannot hold a runtime variable at all, and a
+// build variable set wrong there shipped an app dialling `http://localhost:8090`
+// from whatever phone opened it — twice, presenting both times as a login that
+// would not go through rather than as a bad deploy.
+//
+// So in a deploy the repo decides and the environment is ignored. Everywhere
+// else — dev, `pnpm test:e2e` — `NUXT_PUBLIC_POCKETBASE_URL` still rules, which
+// is what keeps the suite pointed at the local instance. `WORKERS_CI` is set
+// only inside Workers Builds. Point a deploy somewhere else by editing this
+// line, not by adding a variable somewhere invisible.
+// Overwriting the variable, rather than setting `runtimeConfig` below: a
+// `NUXT_PUBLIC_*` variable *overrides* whatever the config holds, so a value
+// written there loses to the dashboard every time. This wins because it is the
+// same variable, set before Nuxt reads it.
+const DEPLOYED_POCKETBASE_URL = 'https://pb.hrsk.me'
+
+if (process.env.WORKERS_CI) process.env.NUXT_PUBLIC_POCKETBASE_URL = DEPLOYED_POCKETBASE_URL
 
 export default defineNuxtConfig({
   compatibilityDate: '2025-07-15',
@@ -74,7 +80,7 @@ export default defineNuxtConfig({
 
   runtimeConfig: {
     public: {
-      // NUXT_PUBLIC_POCKETBASE_URL
+      // NUXT_PUBLIC_POCKETBASE_URL locally; DEPLOYED_POCKETBASE_URL in a deploy.
       pocketbaseUrl: ''
     }
   },
